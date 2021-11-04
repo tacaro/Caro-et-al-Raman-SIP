@@ -66,7 +66,7 @@ gencalc <- function(a, FT, F0, FL, t) {
   )
 }
 
-gencalc_default <- function(a = 0.5, FT, F0 = 0.000015, FL, t = 3) {
+gencalc_default <- function(a = 0.5, FT, F0 = 0.000015, FL, t = 1) {
   case_when(
     t == 0 ~ NA_real_,
     TRUE ~ - (1/t)*(log((FT - a*FL)/(F0 - a*FL)))
@@ -74,30 +74,153 @@ gencalc_default <- function(a = 0.5, FT, F0 = 0.000015, FL, t = 3) {
 }
 ```
 
+`rnorm(3, mean=10, sd=2)`
 
 ```{r}
 # Set random number seed
 set.seed(5)
 
-df_5at2H <- tibble(
-  at2H_2sd = rnorm(n = 20, mean = 5, sd = 2),
-  at2H_3sd = rnorm(n = 20, mean = 5, sd = 3),
-  at2H_4sd = rnorm(n = 20, mean = 5, sd = 4),
-  at2H_5sd = rnorm(n = 20, mean = 5, sd = 5),
-  at2H_6sd = rnorm(n = 20, mean = 5, sd = 6),
-  at2H_7sd = rnorm(n = 20, mean = 5, sd = 7),
-  at2H_8sd = rnorm(n = 20, mean = 5, sd = 8),
-  u_d_2sd = gencalc_default(FT = at2H_2sd, FL = 5),
-  u_d_3sd = gencalc_default(FT = at2H_3sd, FL = 5),
-  u_d_4sd = gencalc_default(FT = at2H_4sd, FL = 5),
-  u_d_5sd = gencalc_default(FT = at2H_5sd, FL = 5),
-  u_d_6sd = gencalc_default(FT = at2H_6sd, FL = 5),
-  u_d_7sd = gencalc_default(FT = at2H_7sd, FL = 5),
-  u_d_8sd = gencalc_default(FT = at2H_8sd, FL = 5),
+df_40at2H <- tibble(
+  f_t = rnorm(40, mean = 30, sd = 1),
+  f_l = 40,
+  t = 1,
+  u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = f_l, t = t)
 )
 
+df_5at2H <- tibble(
+  f_t = rnorm(40, mean = 4, sd = 1),
+  f_l = 5,
+  t = 1,
+  u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = f_l, t = t)
+)
 
-rnorm(3, mean=10, sd=2)
+df_10at2H <- tibble(
+  f_t = rnorm(40, mean = 7, sd = 1),
+  f_l = 10,
+  t = 1,
+  u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = f_l, t = t)
+)
+
+df_20at2H <- tibble(
+  f_t = rnorm(40, mean = 15, sd = 1),
+  f_l = 20,
+  t = 1,
+  u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = f_l, t = t)
+)
+
 ```
 
+# Vary across standard error
+
+```{r}
+sd2 <- tibble(
+  f_t = rnorm(400, mean = 30, sd = 2),
+  u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 40, t = 10),
+  sd = 2
+)
+
+sd1 <- tibble(
+  f_t = rnorm(400, mean = 30, sd = 1),
+  u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 40, t = 10),
+  sd = 1
+)
+
+sd05 <- tibble(
+   f_t = rnorm(400, mean = 30, sd = 0.5),
+   u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 40, t = 10),
+   sd = 0.5
+)
+
+sd025 <- tibble(
+  f_t = rnorm(400, mean = 30, sd = 0.25),
+  u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 40, t = 10),
+  sd = 0.25
+)
+
+error_at_at2H40 <- bind_rows(sd2, sd1, sd05, sd025)
+```
+
+```{r}
+error_at_at2H40 %>% ggplot(aes(x = f_t,
+                           color = as.factor(sd))) +
+  geom_density() +
+  theme_classic()
+```
+
+
+```{r}
+error_at_at2H40 %>% 
+  ggplot(aes(x = f_t,
+             y = u_d,
+             color = as.factor(sd))) +
+  geom_point(alpha = 0.5) +
+  geom_vline(xintercept = 30,
+             color = "red") +
+  facet_wrap(~sd) +
+  labs(x = "2H %",
+       y = "Turnover rate (d^-1)") +
+  theme_classic()
+
+```
+
+
+```{r}
+error_at_at2H40 %>% 
+  ggplot(aes(x = as.factor(sd),
+             y = u_d,
+             color = as.factor(sd))) +
+  geom_jitter(alpha = 0.5) +
+  geom_boxplot() +
+  theme_classic()
+
+```
+
+
+# Vary across label strength
+
+```{r}
+
+L40 <- tibble(
+   f_t = rnorm(400, mean = 10, sd = 0.5),
+   u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 40, t = 3),
+   label = 40
+)
+
+L35 <- tibble(
+   f_t = rnorm(400, mean = 10, sd = 0.5),
+   u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 35, t = 3),
+   label = 35
+)
+
+L30 <- tibble(
+   f_t = rnorm(400, mean = 10, sd = 0.5),
+   u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 30, t = 3),
+   label = 30
+)
+
+L25 <- tibble(
+   f_t = rnorm(400, mean = 10, sd = 0.5),
+   u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 25, t = 3),
+   label = 25
+)
+
+L20 <- tibble(
+   f_t = rnorm(400, mean = 10, sd = 0.5),
+   u_d = gencalc(a = 1, FT = f_t, F0 = 0.000015, FL = 20, t = 3),
+   label = 20
+)
+
+error_across_label <- bind_rows(L40, L35, L30, L25, L20)
+
+
+```
+
+
+```{r}
+error_across_label %>% 
+  ggplot(aes(x = f_t,
+             y = u_d,
+             color = as.factor(label))) +
+  geom_point()
+```
 
