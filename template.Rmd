@@ -10,7 +10,7 @@ output:
     toc: yes
     toc_float: true
     toc_depth: 3
-    code_folding: show
+    code_folding: hide
 editor_options:
   chunk_output_type: console # switch to 'inline' if preferred
 ---
@@ -74,7 +74,6 @@ gencalc_default <- function(a = 0.5, FT, F0 = 0.000015, FL, t = 1) {
 }
 ```
 
-`rnorm(3, mean=10, sd=2)`
 
 ```{r}
 # Set random number seed
@@ -140,6 +139,9 @@ sd025 <- tibble(
 error_at_at2H40 <- bind_rows(sd2, sd1, sd05, sd025)
 ```
 
+**Here are four scenarios showing a range of standard error in 2H measurements, ranging from 2 sigma to 0.25 sigma. We are assuming the true turnover parameter is 30 d^-1**
+
+
 ```{r}
 error_at_at2H40 %>% ggplot(aes(x = f_t,
                            color = as.factor(sd))) +
@@ -147,6 +149,7 @@ error_at_at2H40 %>% ggplot(aes(x = f_t,
   theme_classic()
 ```
 
+**This is how those errors propagate into turnover rate calculations**
 
 ```{r}
 error_at_at2H40 %>% 
@@ -163,6 +166,7 @@ error_at_at2H40 %>%
 
 ```
 
+** another way to look at it**
 
 ```{r}
 error_at_at2H40 %>% 
@@ -170,7 +174,9 @@ error_at_at2H40 %>%
              y = u_d,
              color = as.factor(sd))) +
   geom_jitter(alpha = 0.5) +
-  geom_boxplot() +
+  geom_boxplot(outlier.shape = NA,
+               width = 0.15,
+               color = "black") +
   theme_classic()
 
 ```
@@ -221,6 +227,8 @@ error_across_label %>%
   ggplot(aes(x = f_t,
              y = u_d,
              color = as.factor(label))) +
-  geom_point()
+  geom_point(alpha = 0.5) +
+  scale_color_viridis_d(option = "plasma") +
+  theme_classic()
 ```
 
