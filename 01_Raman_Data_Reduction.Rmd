@@ -36,60 +36,29 @@ source(file = "source/plot_raman.R")
 source(file = "source/calculate_CD.R")
 ```
 
+## Load Raman data from .txt
 
-```{r}
-test_df <- read_raman_file("data/Raman/Thy_50_12/baseline_corr/Thy_50_12_02_1x_45s_532 nm_x100_100%_600 gr_mm_01.txt")
-```
+```{r, message = FALSE}
+# Prepare list of Raman files
+txt_file_list = list.files(
+  path = "data/Raman/txt_files",
+  pattern = "*.txt"
+  )
 
-```{r}
-test_df2_areas <- 
-  test_df2 %>% 
-  group_by(band) %>% 
-  summarize(
-    area = sum(intensity)
-  ) %>% 
-  ungroup() %>% 
-  filter(!is.na(band)) %>% 
-  summarize(
-    cd_frac = )
-  
-test_df <- calculate_CD(test_df)
-
-```
+raman_data <- tibble()
+raman_data <- raman_data[-1,]
 
 
-```{r}
+# Read in all Raman files (this will take a moment)
+i = 0
+for (txt in txt_file_list) {
+  txt_file_len <- length(txt_file_list)
+  temp <- read_raman_file(paste0("data/Raman/txt_files/", txt))
+  temp <- temp %>% mutate(directory = txt)
+  raman_data <- bind_rows(raman_data, temp)
+  i <- i + 1
+  print(paste0("File ", i, " out of ", txt_file_len, " loaded."))
 
-plot_raman <- function(df) {
-  df %>% ggplot(
-    aes(
-      x = wavenumber_cm,
-      y = intensity
-    )
-  ) +
-    # Shade the CD stretch
-    geom_area(data = df %>% filter(band == "CD"),
-              fill = "red",
-              alpha = 0.5
-    ) +
-    # Shade the CH stretch
-    geom_area(data = df %>% filter(band == "CH"),
-              fill = "blue",
-              alpha = 0.5
-    ) +
-    # Add the zero line
-    geom_hline(
-      yintercept = 0,
-      alpha = 0.5,
-      color = "gray") +
-    geom_line(color = "black") +
-    theme_classic() +
-    labs(
-      x = TeX("Wavenumber $(cm^{-1})$"),
-      y = "Intensity",
-    )
 }
-
-plot_raman(test_df)
 ```
 
