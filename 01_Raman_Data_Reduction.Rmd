@@ -166,7 +166,7 @@ cd_pc_data_summarized <- cd_pc_data %>%
     values_from = area
   ) %>% 
   mutate(
-    cd_frac = CD / CH,
+    cd_frac = CD / (CH + CD),
     cd_pc = cd_frac * 100)
  
 
@@ -175,6 +175,8 @@ cd_pc_data_summarized <- cd_pc_data %>%
 ```{r}
 cd_pc_data_summarized %>% 
   filter(organism != "Mbcal") %>% 
+  filter(sample != "Mb_40_24") %>% 
+  filter(sample != "Mb_20_23") %>% 
   ggplot(
     aes(
       x = f_l,
@@ -185,6 +187,7 @@ cd_pc_data_summarized %>%
     )
   ) +
   geom_point() +
-  facet_wrap(vars(organism))
+  facet_wrap(vars(organism)) +
+  geom_smooth(method = "lm")
 ```
 
