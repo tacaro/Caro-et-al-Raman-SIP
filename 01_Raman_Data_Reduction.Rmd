@@ -36,6 +36,20 @@ source(file = "source/plot_raman.R")
 source(file = "source/calculate_CD.R")
 ```
 
+## Load cell metadata
+
+```{r}
+cell_metadata <- readxl::read_excel("data/other/cell_metadata.xlsx") %>% 
+  select(-c(description))
+```
+
+## Load used conditions
+
+```{r}
+used_conditions <- readxl::read_excel("data/other/used_conditions.xlsx")
+```
+
+
 ## Load Raman data from .txt
 
 ```{r, message = FALSE}
@@ -58,7 +72,47 @@ for (txt in txt_file_list) {
   raman_data <- bind_rows(raman_data, temp)
   i <- i + 1
   print(paste0("File ", i, " out of ", txt_file_len, " loaded."))
-
 }
+```
+
+## Assign crude metadata
+
+### Add in the raman_spectrum_id
+
+```{r}
+raman_data_cleaned <- raman_data %>% 
+  mutate(raman_spectrum_id = str_remove(directory, ".txt"))
+```
+
+### Join the two tables
+
+```{r}
+raman_data_cleaned_w_mtda <- raman_data_cleaned %>% 
+  left_join(cell_metadata, by = "raman_spectrum_id")
+```
+  
+### Add in some metadata
+
+```{r}
+raman_cell_data <- raman_data_cleaned_w_mtda %>% 
+  # Remove raman data that does not have a `cell_id`
+  # i.e. spectra that were not "kept" due to acquisition issue or retrys
+  filter(!is.na(cell_id)) %>% 
+  # Parse to find organism
+  mutate(organism = 
+           case_when(
+             str_detect(cell_id, "Mb_") ~ "Mb",
+             str_detect(cell_id, "Mbcal_") ~ "Mbcal",
+             str_detect(cell_id, "Thy_") ~ "Thy"
+           )) %>% 
+  # Add cell numbers
+  mutate(sample = str_sub(cell_id, end = -4),
+         cell_number_str = str_sub(cell_id, start = -2),
+         cell_number = as.numeric(cell_number_str)
+         ) %>% 
+  # Re-order columns for readability
+  select(
+    
+  )
 ```
 
