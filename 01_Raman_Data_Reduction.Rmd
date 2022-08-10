@@ -46,7 +46,8 @@ cell_metadata <- readxl::read_excel("data/other/cell_metadata.xlsx") %>%
 ## Load used conditions
 
 ```{r}
-used_conditions <- readxl::read_excel("data/other/used_conditions.xlsx")
+used_conditions <- readxl::read_excel("data/other/used_conditions.xlsx") %>% 
+  pull(condition)
 ```
 
 
@@ -73,6 +74,9 @@ for (txt in txt_file_list) {
   i <- i + 1
   print(paste0("File ", i, " out of ", txt_file_len, " loaded."))
 }
+
+# Create a cache of the raw data
+saveRDS(raman_data, file = "cache/raman_data_raw.RDS")
 ```
 
 ## Assign crude metadata
@@ -108,11 +112,79 @@ raman_cell_data <- raman_data_cleaned_w_mtda %>%
   # Add cell numbers
   mutate(sample = str_sub(cell_id, end = -4),
          cell_number_str = str_sub(cell_id, start = -2),
-         cell_number = as.numeric(cell_number_str)
+         cell_number = as.numeric(cell_number_str),
+         f_l = case_when(sample == "Mb_40_y" ~ 40,
+                         TRUE ~ as.numeric(
+                           str_sub(
+                             cell_id, 
+                             start = -8, 
+                             end = -7)
+                           )
+                         )
          ) %>% 
+  # Parse to find label strengths
   # Re-order columns for readability
   select(
-    
+    sample,
+    organism,
+    f_l,
+    cell_id,
+    cell_number,
+    cell_number_str,
+    raman_spectrum_id,
+    nanoSIMS_file_id,
+    nanoSIMS_roi_number,
+    wavenumber_cm,
+    intensity,
+    band
   )
+```
+
+
+```{r}
+cd_pc_data <- raman_cell_data %>% 
+  ungroup() %>% 
+  group_by(cell_id, band) %>%
+  mutate(area = sum(intensity)) %>% 
+  ungroup()
+```
+
+```{r}
+saveRDS(cd_pc_data, file = "cache/cd_pc_data.RDS")
+```
+
+# Summarize
+
+```{r}
+cd_pc_data_summarized <- cd_pc_data %>% 
+  select(sample, organism, cell_id, band, f_l, area) %>% 
+  unique() %>% 
+  filter(!is.na(band)) %>%
+  group_by(cell_id) %>%
+  pivot_wider(
+    names_from = band,
+    values_from = area
+  ) %>% 
+  mutate(
+    cd_frac = CD / CH,
+    cd_pc = cd_frac * 100)
+ 
+
+```
+
+```{r}
+cd_pc_data_summarized %>% 
+  filter(organism != "Mbcal") %>% 
+  ggplot(
+    aes(
+      x = f_l,
+      y = cd_pc,
+      color = organism,
+      fill = organism,
+      group = f_l
+    )
+  ) +
+  geom_point() +
+  facet_wrap(vars(organism))
 ```
 
