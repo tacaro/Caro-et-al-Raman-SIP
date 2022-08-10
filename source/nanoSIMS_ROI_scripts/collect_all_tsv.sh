@@ -1,0 +1,1 @@
+cp nanoSIMS_roi/**/*.tsv tsv_output
