@@ -1,5 +1,5 @@
 ---
-title: "01_CD2F_Data_Reduction"
+title: "01_Raman_Data_Reduction"
 author: "Tristan Caro"
 date: "`r Sys.Date()`"
 output: html_document
@@ -25,114 +25,71 @@ rm(list=ls())
 ```{r}
 require(tidyverse)
 require(ggdist)
+require(latex2exp)
 ```
 
-## Load nanoSIMS ROI data from .tsv
+## Load Source
+
 ```{r}
-tsv_file_list = list.files(path = "data/nanoSIMS/tsv_output/", pattern="*.tsv")
-
-roi_data <- tibble()
-roi_data <- roi_data[-1,] # Remove the garbage row of the tibble
-
-for (tsv in tsv_file_list) {
-  temp <- read_tsv(paste0("data/nanoSIMS/tsv_output/", tsv))
-  temp <- temp %>% mutate(filename = tsv)
-  roi_data <- bind_rows(roi_data, temp)
-}
+source(file = "source/read_raman_file.R")
+source(file = "source/plot_raman.R")
+source(file = "source/calculate_CD.R")
 ```
 
-```{r}
-roi_data <- roi_data %>% 
-  mutate(
-    organism = case_when(
-      str_detect(filename, "Thy") ~ "T. hydrogeniphilus",
-      str_detect(filename, "Mb") ~ "M. NSHQ14"
-      ),
-    label_at2H = case_when(
-      organism == "T. hydrogeniphilus" ~ as.numeric(str_sub(filename, start = 5, end = 6)),
-      organism == "M. NSHQ14" ~ as.numeric(str_sub(filename, start = 4, end = 5)),
-    )
-  ) 
-  
 
+```{r}
+test_df <- read_raman_file("data/Raman/Thy_50_12/baseline_corr/Thy_50_12_02_1x_45s_532 nm_x100_100%_600 gr_mm_01.txt")
 ```
 
 ```{r}
-p_roi_data <- roi_data %>% 
-  filter(organism == "T. hydrogeniphilus") %>% 
-  ggplot(
-    aes(
-      x = label_at2H,
-      y = Ratio_2Hx1H,
-      color = organism,
-      group = label_at2H
-    )
-  ) +
-  geom_boxplot() +
-  geom_jitter(
-    width = 0.1,
-    height = 0,
-    alpha = 0.4
-  ) +
-  theme_classic()
-
-p_roi_data
-```
-
-```{r}
-p_roi_data2 <- roi_data %>% 
-  filter(organism == "T. hydrogeniphilus") %>% 
-  filter(label_at2H == 50) %>% 
-  ggplot(
-    aes(
-      x = filename,
-      y = Ratio_2Hx1H,
-      color = filename
-    )
-  ) +
-  geom_boxplot() +
-  geom_point() +
-  theme_classic()
-
-p_roi_data2
-```
-
-```{r}
-p_roi_data3 <- roi_data %>% 
-  filter(organism == "T. hydrogeniphilus") %>% 
-  filter(filename != "Thy_50_12_r4_f0_ratio2H-x-1H.tsv",
-         filename != "Thy_50_12_r7_r_f0_ratio2H-x_1H.tsv") %>% 
-  mutate(
-    label_at2H = case_when(
-      label_at2H == 0 ~ 0.00015576323,
-      TRUE ~ label_at2H)
+test_df2_areas <- 
+  test_df2 %>% 
+  group_by(band) %>% 
+  summarize(
+    area = sum(intensity)
   ) %>% 
-  ggplot(
+  ungroup() %>% 
+  filter(!is.na(band)) %>% 
+  summarize(
+    cd_frac = )
+  
+test_df <- calculate_CD(test_df)
+
+```
+
+
+```{r}
+
+plot_raman <- function(df) {
+  df %>% ggplot(
     aes(
-      x = label_at2H,
-      y = Ratio_2Hx1H,
-      color = organism
+      x = wavenumber_cm,
+      y = intensity
     )
   ) +
-  # geom_boxplot(
-  #   aes(
-  #     group = label_at2H
-  #   ),
-  #   width = 0.5,
-  #   outlier.shape = NA,
-  #   color = "black"
-  # ) +
-  geom_jitter(
-    width = 0.25,
-    height = 0,
-    alpha = 0.4
-  ) +
-  ggdist::stat_pointinterval(
-  color = "black",
-  stroke = 1
-  ) +
-  theme_classic()
+    # Shade the CD stretch
+    geom_area(data = df %>% filter(band == "CD"),
+              fill = "red",
+              alpha = 0.5
+    ) +
+    # Shade the CH stretch
+    geom_area(data = df %>% filter(band == "CH"),
+              fill = "blue",
+              alpha = 0.5
+    ) +
+    # Add the zero line
+    geom_hline(
+      yintercept = 0,
+      alpha = 0.5,
+      color = "gray") +
+    geom_line(color = "black") +
+    theme_classic() +
+    labs(
+      x = TeX("Wavenumber $(cm^{-1})$"),
+      y = "Intensity",
+    )
+}
 
-p_roi_data3
+plot_raman(test_df)
 ```
 
