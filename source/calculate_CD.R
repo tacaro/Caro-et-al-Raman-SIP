@@ -18,6 +18,8 @@ calculate_CD <- function(df) {
   
   return(
     df %>% mutate(
+      cd_area = df_cd_area,
+      ch_area = df_ch_area,
       cd_frac = df_cd_frac,
       cd_pc = df_cd_pc
     )
