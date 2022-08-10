@@ -188,6 +188,7 @@ cd_pc_data_summarized %>%
   ) +
   geom_point() +
   facet_wrap(vars(organism)) +
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm",
+              formula = "y~x")
 ```
 
