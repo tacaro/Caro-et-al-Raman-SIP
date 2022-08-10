@@ -6,7 +6,8 @@
 read_raman_file <- function(file) {
   df <- readr::read_delim(
     file,
-    col_names = FALSE
+    col_names = FALSE,
+    col_types = cols()
     ) %>% 
     rename(
       `wavenumber_cm` = X1,
