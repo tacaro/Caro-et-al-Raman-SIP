@@ -310,6 +310,14 @@ cd_pc_data_summarized2 %>%
     alpha = 0.5,
     size = 0.3
   ) +
+  geom_smooth(
+    method = "lm",
+    formula = y ~ splines::bs(x, 3),
+    color = "black",
+    size = 1,
+    fill = "gray",
+    linetype = "dashed"
+  ) +
   ggdist::stat_halfeye(
     color = "black",
     scale = 0.75,
