@@ -26,6 +26,8 @@ rm(list=ls())
 require(tidyverse)
 require(ggdist)
 require(latex2exp)
+require(cowplot)
+require(ggdist)
 ```
 
 ## Load Source
@@ -54,29 +56,33 @@ used_conditions <- readxl::read_excel("data/other/used_conditions.xlsx") %>%
 ## Load Raman data from .txt
 
 ```{r, message = FALSE}
-# Prepare list of Raman files
-txt_file_list = list.files(
-  path = "data/Raman/txt_files",
-  pattern = "*.txt"
-  )
-
-raman_data <- tibble()
-raman_data <- raman_data[-1,]
-
-
-# Read in all Raman files (this will take a moment)
-i = 0
-for (txt in txt_file_list) {
-  txt_file_len <- length(txt_file_list)
-  temp <- read_raman_file(paste0("data/Raman/txt_files/", txt))
-  temp <- temp %>% mutate(directory = txt)
-  raman_data <- bind_rows(raman_data, temp)
-  i <- i + 1
-  print(paste0("File ", i, " out of ", txt_file_len, " loaded."))
+if (file.exists("cache/raman_data_raw.RDS")) {
+  raman_data <- readRDS("cache/raman_data_raw.RDS")
+} else {
+  # Prepare list of Raman files
+  txt_file_list = list.files(
+    path = "data/Raman/txt_files",
+    pattern = "*.txt"
+    )
+  
+  raman_data <- tibble()
+  raman_data <- raman_data[-1,]
+  
+  # Read in all Raman files (this will take a moment)
+  i = 0
+  for (txt in txt_file_list) {
+    txt_file_len <- length(txt_file_list)
+    temp <- read_raman_file(paste0("data/Raman/txt_files/", txt))
+    temp <- temp %>% mutate(directory = txt)
+    raman_data <- bind_rows(raman_data, temp)
+    i <- i + 1
+    print(paste0("File ", i, " out of ", txt_file_len, " loaded."))
+  }
+  
+  # Create a cache of the raw data
+  saveRDS(raman_data, file = "cache/raman_data_raw.RDS")
 }
 
-# Create a cache of the raw data
-saveRDS(raman_data, file = "cache/raman_data_raw.RDS")
 ```
 
 ## Assign crude metadata
@@ -147,6 +153,19 @@ cd_pc_data <- raman_cell_data %>%
   group_by(cell_id, band) %>%
   mutate(area = sum(intensity)) %>% 
   ungroup()
+
+
+cd_pc_data2 <- raman_cell_data %>% 
+  ungroup() %>% 
+  group_by(cell_id, band) %>%
+  mutate(
+    mean_intensity = mean(intensity),
+    area = case_when(
+      band == "CD" ~ mean_intensity * (2300 - 2040),
+      band == "CH" ~ mean_intensity * (3100 - 2800)
+      )
+    ) %>% 
+  ungroup()
 ```
 
 ```{r}
@@ -169,26 +188,143 @@ cd_pc_data_summarized <- cd_pc_data %>%
     cd_frac = CD / (CH + CD),
     cd_pc = cd_frac * 100)
  
-
+cd_pc_data_summarized2 <- cd_pc_data2 %>% 
+  select(sample, organism, cell_id, band, f_l, area) %>% 
+  unique() %>% 
+  filter(!is.na(band)) %>%
+  group_by(cell_id) %>%
+  pivot_wider(
+    names_from = band,
+    values_from = area
+  ) %>% 
+  mutate(
+    cd_frac = CD / (CH + CD),
+    cd_pc = cd_frac * 100)
+ 
 ```
 
 ```{r}
-cd_pc_data_summarized %>% 
+p1 <- cd_pc_data_summarized %>% 
   filter(organism != "Mbcal") %>% 
   filter(sample != "Mb_40_24") %>% 
   filter(sample != "Mb_20_23") %>% 
+  mutate(f_l = case_when(
+    f_l == 0 ~ 0.00000001,
+    TRUE ~ f_l
+  )) %>% 
   ggplot(
     aes(
-      x = f_l,
+      x = as.numeric(f_l),
       y = cd_pc,
       color = organism,
       fill = organism,
-      group = f_l
     )
   ) +
   geom_point() +
   facet_wrap(vars(organism)) +
-  geom_smooth(method = "lm",
-              formula = "y~x")
+  coord_cartesian(ylim = c(0,45)) +
+  geom_smooth(
+    method = "lm",
+    formula = "y~x",
+    color = "gray",
+    linetype = "dashed",
+    fill = "gray") +
+  labs(
+    x = "Label Strength",
+    y = "CD%",
+    title = "Area = sum(CD%)"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA"
+  )
+p1
+```
+
+```{r}
+p2 <- cd_pc_data_summarized2 %>% 
+  filter(organism != "Mbcal") %>% 
+  filter(sample != "Mb_40_24") %>% 
+  filter(sample != "Mb_20_23") %>% 
+  mutate(f_l = case_when(
+    f_l == 0 ~ 0.00000001,
+    TRUE ~ f_l
+  )) %>% 
+  ggplot(
+    aes(
+      x = as.numeric(f_l),
+      y = cd_pc,
+      color = organism,
+      fill = organism,
+    )
+  ) +
+  geom_point() +
+  facet_wrap(vars(organism)) +
+  coord_cartesian(ylim = c(0,45)) +
+  geom_smooth(
+    method = "lm",
+    formula = "y~x",
+    color = "gray",
+    linetype = "dashed",
+    fill = "gray") +
+  labs(
+    x = "Label Strength",
+    y = "CD%",
+    title = "Area = ∆x * mean(CD%)"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA"
+  )
+p2
+```
+
+
+```{r}
+cowplot::plot_grid(
+  p1, p2,
+  nrow = 2
+)
+```
+
+```{r}
+cd_pc_data_summarized2 %>% 
+  filter(organism != "Mbcal") %>% 
+  filter(sample != "Mb_40_24") %>% 
+  filter(sample != "Mb_20_23") %>% 
+  mutate(f_l = case_when(
+    f_l == 0 ~ 0.00000001,
+    TRUE ~ f_l
+  )) %>% 
+  ggplot(
+    aes(
+      x = as.numeric(f_l),
+      y = cd_pc,
+      color = organism,
+      fill = organism,
+    )
+  ) +
+  geom_jitter(
+    height = 0,
+    width = 1,
+    alpha = 0.5,
+    size = 0.3
+  ) +
+  ggdist::stat_halfeye(
+    color = "black",
+    scale = 0.75,
+    position = position_nudge(x = 2)
+  ) +
+  facet_wrap(vars(organism)) +
+  coord_cartesian(ylim = c(0,45)) +
+  labs(
+    x = "Label Strength",
+    y = "CD%",
+    title = "Area = ∆x * mean(CD%)"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA"
+  )
 ```
 
