@@ -56,8 +56,10 @@ used_conditions <- readxl::read_excel("data/other/used_conditions.xlsx") %>%
 ## Load Raman data from .txt
 
 ```{r, message = FALSE}
+
 if (file.exists("cache/raman_data_raw.RDS")) {
   raman_data <- readRDS("cache/raman_data_raw.RDS")
+  
 } else {
   # Prepare list of Raman files
   txt_file_list = list.files(
@@ -82,7 +84,6 @@ if (file.exists("cache/raman_data_raw.RDS")) {
   # Create a cache of the raw data
   saveRDS(raman_data, file = "cache/raman_data_raw.RDS")
 }
-
 ```
 
 ## Assign crude metadata
