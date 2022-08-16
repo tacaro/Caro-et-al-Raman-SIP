@@ -76,7 +76,7 @@ roi_data2 <- roi_data %>%
 roi_data_joined <- cell_metadata %>% 
   left_join(
     roi_data2,
-    by = c("nanoSIMS_roi_number", "")
+    by = c("nanoSIMS_file_id", "nanoSIMS_roi_number")
   )
 ```
 
