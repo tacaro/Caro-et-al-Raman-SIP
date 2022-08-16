@@ -262,10 +262,6 @@ cd_pc_poly <- raman_cell_poly %>%
   ungroup()
 ```
 
-```{r}
-saveRDS(cd_pc_data, file = "cache/cd_pc_data.RDS")
-saveRDS(cd_pc_poly, file = "cache/cd_pc_poly.RDS")
-```
 
 # Summarize
 
@@ -298,6 +294,20 @@ cd_pc_poly_summarized <- cd_pc_poly %>%
  
  
 ```
+
+
+# Export
+
+```{r}
+saveRDS(cd_pc_data, file = "cache/cd_pc_data.RDS")
+saveRDS(cd_pc_poly, file = "cache/cd_pc_poly.RDS")
+
+saveRDS(cd_pc_data_summarized, file = "cache/cd_pc_data_summarized.RDS")
+saveRDS(cd_pc_poly_summarized, file = "cache/cd_pc_poly_summarized.RDS")
+```
+
+
+# OPTIONAL: Investigate data with plots
 
 ```{r}
 raw_data_plot <- cd_pc_data_summarized %>% 
