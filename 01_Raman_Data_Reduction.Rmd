@@ -63,7 +63,7 @@ if (file.exists("cache/raman_data_raw.RDS")) {
 } else {
   # Prepare list of Raman files
   txt_file_list = list.files(
-    path = "data/Raman/txt_files",
+    path = "data/Raman/baseline_corr",
     pattern = "*.txt"
     )
   
@@ -74,7 +74,7 @@ if (file.exists("cache/raman_data_raw.RDS")) {
   i = 0
   for (txt in txt_file_list) {
     txt_file_len <- length(txt_file_list)
-    temp <- read_raman_file(paste0("data/Raman/txt_files/", txt))
+    temp <- read_raman_file(paste0("data/Raman/baseline_corr/", txt))
     temp <- temp %>% mutate(directory = txt)
     raman_data <- bind_rows(raman_data, temp)
     i <- i + 1
