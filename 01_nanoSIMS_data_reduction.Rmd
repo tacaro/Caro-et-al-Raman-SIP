@@ -19,12 +19,11 @@ knitr::opts_chunk$set(echo = TRUE)
 rm(list=ls())
 ```
 
-
 ## Load Libraries
 
 ```{r}
-require(tidyverse)
-require(ggdist)
+library(tidyverse)
+library(ggdist)
 ```
 
 ## Load nanoSIMS ROI data from .tsv
@@ -41,8 +40,17 @@ for (tsv in tsv_file_list) {
 }
 ```
 
+## Load cell metadata
+
 ```{r}
-roi_data <- roi_data %>% 
+cell_metadata <- readxl::read_excel("data/other/cell_metadata.xlsx") %>% 
+  select(-c(description))
+```
+
+## Add organism names and parse nanoSIMS_file_id
+
+```{r}
+roi_data2 <- roi_data %>% 
   mutate(
     organism = case_when(
       str_detect(filename, "Thy") ~ "T. hydrogeniphilus",
@@ -52,11 +60,35 @@ roi_data <- roi_data %>%
       organism == "T. hydrogeniphilus" ~ as.numeric(str_sub(filename, start = 5, end = 6)),
       organism == "M. NSHQ14" ~ as.numeric(str_sub(filename, start = 4, end = 5)),
     )
-  ) 
-  
-
+  ) %>% 
+  mutate(
+    nanoSIMS_file_id = str_sub(filename, end = -21)
+  ) %>% 
+  rename(
+    nanoSIMS_roi_number = ROI
+  )
 ```
 
+
+## Join cell_metadata to roi_data
+
+```{r}
+roi_data_joined <- cell_metadata %>% 
+  left_join(
+    roi_data2,
+    by = c("nanoSIMS_roi_number", "")
+  )
+```
+
+
+
+
+
+
+
+
+
+# OPTIONAL: Explore with some plots
 ```{r}
 p_roi_data <- roi_data %>% 
   filter(organism == "T. hydrogeniphilus") %>% 
