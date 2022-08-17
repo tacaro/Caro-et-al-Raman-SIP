@@ -28,16 +28,26 @@ library(ggdist)
 
 ## Load nanoSIMS ROI data from .tsv
 ```{r}
-tsv_file_list = list.files(path = "data/nanoSIMS/tsv_output/", pattern="*.tsv")
-
-roi_data <- tibble()
-roi_data <- roi_data[-1,] # Remove the garbage row of the tibble
-
-for (tsv in tsv_file_list) {
-  temp <- read_tsv(paste0("data/nanoSIMS/tsv_output/", tsv))
-  temp <- temp %>% mutate(filename = tsv)
-  roi_data <- bind_rows(roi_data, temp)
+if (file.exists("cache/roi_data.RDS")) {
+  roi_data <- readRDS("cache/roi_data.RDS")
+} else {
+  tsv_file_list = list.files(path = "data/nanoSIMS/tsv_output/", pattern="*.tsv")
+  
+  roi_data <- tibble()
+  roi_data <- roi_data[-1,] # Remove the garbage row of the tibble
+  i = 0
+  
+  for (tsv in tsv_file_list) {
+    temp <- read_tsv(paste0("data/nanoSIMS/tsv_output/", tsv),
+                     col_types = cols())
+    temp <- temp %>% mutate(filename = tsv)
+    roi_data <- bind_rows(roi_data, temp)
+    i <- i + 1
+    print(paste("File", i, "of", length(tsv_file_list), "loaded."))
+  }
+  saveRDS(roi_data, "cache/roi_data.RDS")
 }
+
 ```
 
 ## Load cell metadata
