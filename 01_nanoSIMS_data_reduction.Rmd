@@ -57,26 +57,33 @@ cell_metadata <- readxl::read_excel("data/other/cell_metadata.xlsx") %>%
   select(-c(description))
 ```
 
-## Add organism names and parse nanoSIMS_file_id
+## Add organism names, parse nanoSIMS_file_id, add crude metadata
 
 ```{r}
 roi_data2 <- roi_data %>% 
+  # Remove green-marked (not id'd) cells for co-registered dataset
+  filter(Group == "red") %>%
+  # Add some quick organism id
   mutate(
     organism = case_when(
       str_detect(filename, "Thy") ~ "T. hydrogeniphilus",
       str_detect(filename, "Mb") ~ "M. NSHQ14"
       ),
+    # some quick label strength
     label_at2H = case_when(
       organism == "T. hydrogeniphilus" ~ as.numeric(str_sub(filename, start = 5, end = 6)),
       organism == "M. NSHQ14" ~ as.numeric(str_sub(filename, start = 4, end = 5)),
     )
   ) %>% 
+  # Parse the nanoSIMS_file_id
   mutate(
     nanoSIMS_file_id = str_sub(filename, end = -21)
   ) %>% 
+  # match the metadata column name
   rename(
     nanoSIMS_roi_number = ROI
   )
+  
 ```
 
 
@@ -90,11 +97,11 @@ roi_data_joined <- cell_metadata %>%
   )
 ```
 
-
-
-
-
-
+## Save to cache
+```{r}
+# Cache it!
+saveRDS(roi_data_joined, "cache/roi_data_joined.RDS")
+```
 
 
 

@@ -7,7 +7,41 @@ output: html_document
 
 # Setup
 
+
+## Clear the environment
+
 ```{r}
-require(tidyverse)
+rm(list=ls())
+```
+
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+```
+
+## Read from cache
+```{r}
+roi_data_joined <- readRDS("cache/roi_data_joined.RDS")
+cd_pc_summarized <- readRDS("cache/cd_pc_data_summarized.RDS")
+```
+
+## Trim the data
+
+```{r}
+roi_data_joined_trm <- roi_data_joined %>% 
+  filter(!is.na(nanoSIMS_file_id))
+```
+
+## Join the data!
+
+```{r}
+co_registered <- roi_data_joined_trm %>% 
+  left_join(cd_pc_summarized,
+            by = "cell_id") %>% 
+  select(-c(Group, `organism.y`))
+
+saveRDS(co_registered, "cache/co_registered.RDS")
 ```
 
