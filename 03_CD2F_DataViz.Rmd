@@ -3,11 +3,61 @@ title: "03_CD2F_DataViz"
 author: "Tristan Caro"
 date: "`r Sys.Date()`"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
+# Setup
+
+## Load libraries
 
 ```{r}
 library(tidyverse)
 library(cowplot)
+library(latex2exp)
+```
+
+## Load from cache
+
+```{r}
+co_registered <- readRDS("cache/co_registered.RDS")
+```
+
+# Plot
+
+```{r}
+co_registered %>% 
+  filter(sample != "Mb_20_23") %>% 
+  ggplot(
+    aes(x = Ratio_2Hx1H * 100,
+        y = cd_pc,
+        color = as.factor(f_l),
+        group = organism.x
+    )
+  ) +
+  geom_point() +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 0.5
+  ) +
+  stat_smooth(
+    formula = y ~ splines::bs(x, 3),
+    size = 0.5,
+    method = 'lm'
+  ) +
+  facet_wrap(vars(organism.x)) +
+  coord_cartesian(xlim = c(0,50), ylim = c(0,50))+
+  scale_color_viridis_d() +
+  theme_bw() +
+  labs(
+    x = TeX("$^2F$ (atom %)"),
+    y = "CD% (Raman)",
+    color = TeX("Label Strength $^2F$ (atom %)")
+  ) +
+  theme(
+    legend.position = "bottom"
+  )
 ```
 
