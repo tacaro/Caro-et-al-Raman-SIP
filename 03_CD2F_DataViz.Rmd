@@ -15,6 +15,8 @@ editor_options:
 library(tidyverse)
 library(cowplot)
 library(latex2exp)
+library(ggside)
+library(ggsci)
 ```
 
 ## Load from cache
@@ -35,21 +37,27 @@ co_registered %>%
         group = organism.x
     )
   ) +
-  geom_point() +
+  geom_point(
+    alpha = 75
+  ) +
   geom_abline(
     slope = 1,
     linetype = "dashed",
     color = "gray",
-    alpha = 0.5
+    alpha = 0.5,
   ) +
   stat_smooth(
-    formula = y ~ splines::bs(x, 3),
+    formula = y ~ x,
+    #formula = y ~ splines::bs(x, 3),
     size = 0.5,
     method = 'lm'
   ) +
   facet_wrap(vars(organism.x)) +
-  coord_cartesian(xlim = c(0,50), ylim = c(0,50))+
-  scale_color_viridis_d() +
+  coord_cartesian(
+    xlim = c(0,50), 
+    ylim = c(0,50)
+  ) +
+  scale_color_viridis_d(end = 0.9) +
   theme_bw() +
   labs(
     x = TeX("$^2F$ (atom %)"),
@@ -57,7 +65,8 @@ co_registered %>%
     color = TeX("Label Strength $^2F$ (atom %)")
   ) +
   theme(
-    legend.position = "bottom"
+    legend.position = "bottom",
+    ggside.panel.scale = 2
   )
 ```
 
