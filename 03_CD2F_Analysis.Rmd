@@ -1,0 +1,352 @@
+---
+title: "03_CD2F_Analysis"
+author: "Tristan Caro"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Setup
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+library(magrittr)
+```
+
+## Load from cache
+
+```{r}
+co_registered <- readRDS("cache/co_registered.RDS")
+```
+
+# Analysis
+
+## Separate
+Let's break this dataset into two distinct datasets for Methanogens and SRB:
+
+```{r}
+srb <- co_registered %>% filter(organism.x == "T. hydrogeniphilus")
+mb <- co_registered %>% filter(organism.x == "M. NSHQ14")
+```
+
+## Tidy up the dataset
+
+```{r}
+srb %<>% select(cell_id, Ratio_2Hx1H, cd_frac, cd_pc) 
+mb %<>% select(cell_id, Ratio_2Hx1H, cd_frac, cd_pc) 
+```
+
+## Test fits
+
+Let's test some fits including linear, poly, and b-splines
+
+```{r}
+srb_1 <- lm(cd_pc ~ Ratio_2Hx1H, data = srb) # linear model
+srb_2 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 2), data = srb) # poly 2
+srb_3 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 3), data = srb) # poly 3
+srb_4 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 4), data = srb) # poly 4
+srb_5 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 5), data = srb) # poly 5
+srb_6 <- lm(cd_pc ~ splines::bs(Ratio_2Hx1H, 3), data = srb) # 3-b-spline
+
+
+mb_1 <- lm(cd_pc ~ Ratio_2Hx1H, data = mb) # linear model
+mb_2 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 2), data = mb) # poly 2
+mb_3 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 3), data = mb) # poly 3
+mb_4 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 4), data = mb) # poly 4
+mb_5 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 5), data = mb) # poly 5
+mb_6 <- lm(cd_pc ~ splines::bs(Ratio_2Hx1H, 3), data = mb) # 3-b-spline
+```
+
+And we can look at the summary statistics: calculated adjusted R-squared of each model
+
+```{r}
+srb_1_r2 <- summary(srb_1)$adj.r.squared
+srb_2_r2 <- summary(srb_2)$adj.r.squared
+srb_3_r2 <- summary(srb_3)$adj.r.squared
+srb_4_r2 <- summary(srb_4)$adj.r.squared
+srb_5_r2 <- summary(srb_5)$adj.r.squared
+srb_6_r2 <- summary(srb_6)$adj.r.squared
+
+mb_1_r2 <- summary(mb_1)$adj.r.squared
+mb_2_r2 <- summary(mb_2)$adj.r.squared
+mb_3_r2 <- summary(mb_3)$adj.r.squared
+mb_4_r2 <- summary(mb_4)$adj.r.squared
+mb_5_r2 <- summary(mb_5)$adj.r.squared
+mb_6_r2 <- summary(mb_6)$adj.r.squared
+
+srb_1_r2
+srb_2_r2
+srb_3_r2
+srb_4_r2
+srb_5_r2
+srb_6_r2
+mb_1_r2 
+mb_2_r2 
+mb_3_r2 
+mb_4_r2 
+mb_5_r2 
+mb_6_r2 
+```
+
+## Visualize the curve fits
+
+With base R:
+
+```{r}
+plot(srb$Ratio_2Hx1H, srb$cd_pc, xlab = "2F", ylab = "CD%")
+x_axis <- seq(0, 0.20, length = 20)
+lines(x_axis, predict(srb_1, data.frame(Ratio_2Hx1H = x_axis)), col = "green")
+lines(x_axis, predict(srb_2, data.frame(Ratio_2Hx1H = x_axis)), col = "red")
+lines(x_axis, predict(srb_3, data.frame(Ratio_2Hx1H = x_axis)), col = "purple")
+lines(x_axis, predict(srb_4, data.frame(Ratio_2Hx1H = x_axis)), col = "blue")
+lines(x_axis, predict(srb_5, data.frame(Ratio_2Hx1H = x_axis)), col = "orange")
+lines(x_axis, predict(srb_1, data.frame(Ratio_2Hx1H = x_axis)), col = "pink")
+```
+
+Or with ggplot:
+
+```{r}
+srb %>% ggplot(
+  aes(
+    x = Ratio_2Hx1H,
+    y = cd_pc
+  )
+) +
+  geom_point(
+    shape = 21,
+    color = "black"
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~x,
+    color = "#a32121",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 2),
+    color = "#a37821",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 3),
+    color = "#b4d61c",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 4),
+    color = "#41d61c",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 5),
+    color = "#1cd3d6",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y ~ splines::bs(x, 3),
+    color = "#1c1fd6",
+    size = 0.75,
+    se = FALSE
+  ) +
+  theme_bw()
+```
+
+Great thing about ggplot: we can replicate it with the Mb dataset immediately:
+
+```{r}
+mb %>% ggplot(
+  aes(
+    x = Ratio_2Hx1H,
+    y = cd_pc
+  )
+) +
+  geom_point(
+    shape = 21,
+    color = "black"
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~x,
+    color = "#a32121",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 2),
+    color = "#a37821",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 3),
+    color = "#b4d61c",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 4),
+    color = "#41d61c",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 5),
+    color = "#1cd3d6",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y ~ splines::bs(x, 3),
+    color = "#1c1fd6",
+    size = 0.75,
+    se = FALSE
+  ) +
+  theme_bw()
+```
+
+Or even with the whole dataset:
+
+```{r}
+co_registered %>% ggplot(
+  aes(
+    x = Ratio_2Hx1H,
+    y = cd_pc
+  )
+) +
+  geom_point(
+    shape = 21,
+    color = "black"
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~x,
+    color = "#a32121",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 2),
+    color = "#a37821",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 3),
+    color = "#b4d61c",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 4),
+    color = "#41d61c",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 5),
+    color = "#1cd3d6",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y ~ splines::bs(x, 3),
+    color = "#1c1fd6",
+    size = 0.75,
+    se = FALSE
+  ) +
+  theme_bw()
+```
+
+The R^2 don't tell us too much, but the lines can be very informative. There are decisions to be made regarding which data is "priority" to fit. For example, what happens if we remove the 0% sample?
+
+```{r}
+co_registered_no_zero <- co_registered %>% 
+  filter(f_l != 0) %>% 
+  select(cell_id, Ratio_2Hx1H, cd_frac, cd_pc)
+
+co_registered_no_zero %>% 
+  ggplot(
+  aes(
+    x = Ratio_2Hx1H,
+    y = cd_pc
+  )
+) +
+  geom_point(
+    shape = 21,
+    color = "black"
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~x,
+    color = "#a32121",
+    size = 0.75,
+    se = FALSE
+  ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~poly(x, 2),
+    color = "#a37821",
+    size = 0.75,
+    se = FALSE
+  ) +
+  # stat_smooth(
+  #   method = "lm",
+  #   formula = y~poly(x, 3),
+  #   color = "#b4d61c",
+  #   size = 0.75,
+  #   se = FALSE
+  # ) +
+  # stat_smooth(
+  #   method = "lm",
+  #   formula = y~poly(x, 4),
+  #   color = "#41d61c",
+  #   size = 0.75,
+  #   se = FALSE
+  # ) +
+  # stat_smooth(
+  #   method = "lm",
+  #   formula = y~poly(x, 5),
+  #   color = "#1cd3d6",
+  #   size = 0.75,
+  #   se = FALSE
+  # ) +
+  # stat_smooth(
+  #   method = "lm",
+  #   formula = y ~ splines::bs(x, 3),
+  #   color = "#1c1fd6",
+  #   size = 0.75,
+  #   se = FALSE
+  # ) +
+  stat_smooth(
+    method = "lm",
+    formula = y~log(x),
+    color = "red",
+    size = 0.75,
+    se = FALSE
+  ) +
+  theme_bw()
+```
+
