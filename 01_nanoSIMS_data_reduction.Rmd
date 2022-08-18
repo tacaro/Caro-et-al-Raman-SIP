@@ -19,44 +19,107 @@ knitr::opts_chunk$set(echo = TRUE)
 rm(list=ls())
 ```
 
-
 ## Load Libraries
 
 ```{r}
-require(tidyverse)
-require(ggdist)
+library(tidyverse)
+library(ggdist)
 ```
 
 ## Load nanoSIMS ROI data from .tsv
 ```{r}
-tsv_file_list = list.files(path = "data/nanoSIMS/tsv_output/", pattern="*.tsv")
-
-roi_data <- tibble()
-roi_data <- roi_data[-1,] # Remove the garbage row of the tibble
-
-for (tsv in tsv_file_list) {
-  temp <- read_tsv(paste0("data/nanoSIMS/tsv_output/", tsv))
-  temp <- temp %>% mutate(filename = tsv)
-  roi_data <- bind_rows(roi_data, temp)
+if (file.exists("cache/roi_data.RDS")) {
+  roi_data <- readRDS("cache/roi_data.RDS")
+} else {
+  tsv_file_list = list.files(path = "data/nanoSIMS/tsv_output/", pattern="*.tsv")
+  
+  roi_data <- tibble()
+  roi_data <- roi_data[-1,] # Remove the garbage row of the tibble
+  i = 0
+  
+  for (tsv in tsv_file_list) {
+    temp <- read_tsv(paste0("data/nanoSIMS/tsv_output/", tsv),
+                     col_types = cols())
+    temp <- temp %>% mutate(filename = tsv)
+    roi_data <- bind_rows(roi_data, temp)
+    i <- i + 1
+    print(paste("File", i, "of", length(tsv_file_list), "loaded."))
+  }
+  saveRDS(roi_data, "cache/roi_data.RDS")
 }
+
 ```
 
+## Load cell metadata
+
 ```{r}
-roi_data <- roi_data %>% 
+cell_metadata <- readxl::read_excel("data/other/cell_metadata.xlsx") %>% 
+  # Filter out bad nanoSIMS data (ignore == True) and cells that do not have nanoSIMS roi associated with them
+  filter(
+    ignore != TRUE,
+    !is.na(nanoSIMS_file_id)
+    ) %>% 
+  # Tidy up
+  select(-c(description, ignore, raman_spectrum_id)) 
+```
+
+## Add organism names, parse nanoSIMS_file_id, add crude metadata
+
+```{r}
+roi_data2 <- roi_data %>% 
+  # Remove green-marked (not id'd) cells for co-registered dataset
+  filter(Group == "red") %>%
+  # Add some quick organism id
   mutate(
     organism = case_when(
       str_detect(filename, "Thy") ~ "T. hydrogeniphilus",
       str_detect(filename, "Mb") ~ "M. NSHQ14"
       ),
+    # some quick label strength
     label_at2H = case_when(
       organism == "T. hydrogeniphilus" ~ as.numeric(str_sub(filename, start = 5, end = 6)),
       organism == "M. NSHQ14" ~ as.numeric(str_sub(filename, start = 4, end = 5)),
     )
-  ) 
-  
+  ) %>% 
+  # Parse the nanoSIMS_file_id
+  mutate(
+    nanoSIMS_file_id = str_sub(filename, end = -21)
+  ) %>% 
+  # match the metadata column name
+  rename(nanoSIMS_roi_number = ROI)
 
+
+# Sanity check to make sure all the files are there:
+cell_files <- cell_metadata %>% select(nanoSIMS_file_id) %>% unique()
+roi_files <- roi_data2 %>% select(nanoSIMS_file_id) %>% unique()
+
+
+paste("These are the nanoSIMS files that contain ROIs but have zero co-registered cells:", setdiff(roi_files, cell_files))
+
+paste("These are the nanoSIMS_file_ids that exist in the cell_metadata.xlsx but are not accounted for in the .tsvs that were imported:", setdiff(cell_files, roi_files))
+  
 ```
 
+
+## Join cell_metadata to roi_data
+
+```{r}
+roi_data_joined <- cell_metadata %>% 
+  left_join(
+    roi_data2,
+    by = c("nanoSIMS_file_id", "nanoSIMS_roi_number")
+  )
+```
+
+## Save to cache
+```{r}
+# Cache it!
+saveRDS(roi_data_joined, "cache/roi_data_joined.RDS")
+```
+
+
+
+# OPTIONAL: Explore with some plots
 ```{r}
 p_roi_data <- roi_data %>% 
   filter(organism == "T. hydrogeniphilus") %>% 
@@ -98,7 +161,7 @@ p_roi_data2
 ```
 
 ```{r}
-p_roi_data3 <- roi_data %>% 
+p_roi_data3 <- roi_data2 %>% 
   filter(organism == "T. hydrogeniphilus") %>% 
   filter(filename != "Thy_50_12_r4_f0_ratio2H-x-1H.tsv",
          filename != "Thy_50_12_r7_r_f0_ratio2H-x_1H.tsv") %>% 
@@ -125,11 +188,12 @@ p_roi_data3 <- roi_data %>%
   geom_jitter(
     width = 0.25,
     height = 0,
-    alpha = 0.4
+    alpha = 0.4,
+    size = 0.5
   ) +
-  ggdist::stat_pointinterval(
-  color = "black",
-  stroke = 1
+  ggdist::stat_halfeye(
+    position = position_nudge(x = 2),
+    color = "black"
   ) +
   theme_classic()
 

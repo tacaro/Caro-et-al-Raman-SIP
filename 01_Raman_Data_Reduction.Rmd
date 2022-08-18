@@ -23,17 +23,19 @@ rm(list=ls())
 ## Load Libraries
 
 ```{r}
-require(tidyverse)
-require(ggdist)
-require(latex2exp)
-require(cowplot)
-require(ggdist)
+library(tidyverse)
+library(ggdist)
+library(latex2exp)
+library(cowplot)
+library(ggdist)
+library(ggridges)
 ```
 
 ## Load Source
 
 ```{r}
 source(file = "source/read_raman_file.R")
+source(file = "source/read_raman_file_rm_mtda.R")
 source(file = "source/plot_raman.R")
 source(file = "source/calculate_CD.R")
 ```
@@ -56,12 +58,14 @@ used_conditions <- readxl::read_excel("data/other/used_conditions.xlsx") %>%
 ## Load Raman data from .txt
 
 ```{r, message = FALSE}
+
 if (file.exists("cache/raman_data_raw.RDS")) {
   raman_data <- readRDS("cache/raman_data_raw.RDS")
+  
 } else {
   # Prepare list of Raman files
   txt_file_list = list.files(
-    path = "data/Raman/txt_files",
+    path = "data/Raman/baseline_corr",
     pattern = "*.txt"
     )
   
@@ -72,7 +76,7 @@ if (file.exists("cache/raman_data_raw.RDS")) {
   i = 0
   for (txt in txt_file_list) {
     txt_file_len <- length(txt_file_list)
-    temp <- read_raman_file(paste0("data/Raman/txt_files/", txt))
+    temp <- read_raman_file(paste0("data/Raman/baseline_corr/", txt))
     temp <- temp %>% mutate(directory = txt)
     raman_data <- bind_rows(raman_data, temp)
     i <- i + 1
@@ -81,9 +85,45 @@ if (file.exists("cache/raman_data_raw.RDS")) {
   
   # Create a cache of the raw data
   saveRDS(raman_data, file = "cache/raman_data_raw.RDS")
+  rm(temp) # remove temp df to save space
 }
-
 ```
+
+
+## Load Raman data from .txt (poly-smoothed)
+
+```{r, message = FALSE}
+
+if (file.exists("cache/raman_data_poly.RDS")) {
+  raman_poly <- readRDS("cache/raman_data_poly.RDS")
+  
+} else {
+  # Prepare list of Raman files
+  txt_file_list_poly = list.files(
+    path = "data/Raman/poly_smoothed",
+    pattern = "*.txt"
+    )
+  
+  raman_poly <- tibble()
+  raman_poly <- raman_poly[-1,]
+  
+  # Read in all Raman files (this will take a moment)
+  i = 0
+  for (txt in txt_file_list_poly) {
+    txt_file_len_poly <- length(txt_file_list_poly)
+    temp <- read_raman_file_rm_mtda(paste0("data/Raman/poly_smoothed/", txt))
+    temp <- temp %>% mutate(directory = txt)
+    raman_poly <- bind_rows(raman_poly, temp)
+    i <- i + 1
+    print(paste0("File ", i, " out of ", txt_file_len_poly, " loaded."))
+  }
+  
+  # Create a cache of the raw data
+  saveRDS(raman_poly, file = "cache/raman_data_poly.RDS")
+  rm(temp) # remove temp df to save space
+}
+```
+
 
 ## Assign crude metadata
 
@@ -92,12 +132,18 @@ if (file.exists("cache/raman_data_raw.RDS")) {
 ```{r}
 raman_data_cleaned <- raman_data %>% 
   mutate(raman_spectrum_id = str_remove(directory, ".txt"))
+
+raman_poly_cleaned <- raman_poly %>% 
+  mutate(raman_spectrum_id = str_remove(directory, ".txt"))
 ```
 
 ### Join the two tables
 
 ```{r}
 raman_data_cleaned_w_mtda <- raman_data_cleaned %>% 
+  left_join(cell_metadata, by = "raman_spectrum_id")
+
+raman_poly_cleaned_w_mtda <- raman_poly_cleaned %>% 
   left_join(cell_metadata, by = "raman_spectrum_id")
 ```
   
@@ -120,6 +166,49 @@ raman_cell_data <- raman_data_cleaned_w_mtda %>%
          cell_number_str = str_sub(cell_id, start = -2),
          cell_number = as.numeric(cell_number_str),
          f_l = case_when(sample == "Mb_40_y" ~ 40,
+                         sample == "Mb_20_x" ~ 20,
+                         TRUE ~ as.numeric(
+                           str_sub(
+                             cell_id, 
+                             start = -8, 
+                             end = -7)
+                           )
+                         )
+         ) %>% 
+  # Parse to find label strengths
+  # Re-order columns for readability
+  select(
+    sample,
+    organism,
+    f_l,
+    cell_id,
+    cell_number,
+    cell_number_str,
+    raman_spectrum_id,
+    nanoSIMS_file_id,
+    nanoSIMS_roi_number,
+    wavenumber_cm,
+    intensity,
+    band
+  )
+
+raman_cell_poly <- raman_poly_cleaned_w_mtda %>% 
+  # Remove raman data that does not have a `cell_id`
+  # i.e. spectra that were not "kept" due to acquisition issue or retrys
+  filter(!is.na(cell_id)) %>% 
+  # Parse to find organism
+  mutate(organism = 
+           case_when(
+             str_detect(cell_id, "Mb_") ~ "Mb",
+             str_detect(cell_id, "Mbcal_") ~ "Mbcal",
+             str_detect(cell_id, "Thy_") ~ "Thy"
+           )) %>% 
+  # Add cell numbers
+  mutate(sample = str_sub(cell_id, end = -4),
+         cell_number_str = str_sub(cell_id, start = -2),
+         cell_number = as.numeric(cell_number_str),
+         f_l = case_when(sample == "Mb_40_y" ~ 40,
+                         sample == "Mb_20_x" ~ 20,
                          TRUE ~ as.numeric(
                            str_sub(
                              cell_id, 
@@ -151,11 +240,16 @@ raman_cell_data <- raman_data_cleaned_w_mtda %>%
 cd_pc_data <- raman_cell_data %>% 
   ungroup() %>% 
   group_by(cell_id, band) %>%
-  mutate(area = sum(intensity)) %>% 
+  mutate(
+    mean_intensity = mean(intensity),
+    area = case_when(
+      band == "CD" ~ mean_intensity * (2300 - 2040),
+      band == "CH" ~ mean_intensity * (3100 - 2800)
+      )
+    ) %>% 
   ungroup()
 
-
-cd_pc_data2 <- raman_cell_data %>% 
+cd_pc_poly <- raman_cell_poly %>% 
   ungroup() %>% 
   group_by(cell_id, band) %>%
   mutate(
@@ -168,9 +262,6 @@ cd_pc_data2 <- raman_cell_data %>%
   ungroup()
 ```
 
-```{r}
-saveRDS(cd_pc_data, file = "cache/cd_pc_data.RDS")
-```
 
 # Summarize
 
@@ -187,8 +278,8 @@ cd_pc_data_summarized <- cd_pc_data %>%
   mutate(
     cd_frac = CD / (CH + CD),
     cd_pc = cd_frac * 100)
- 
-cd_pc_data_summarized2 <- cd_pc_data2 %>% 
+
+cd_pc_poly_summarized <- cd_pc_poly %>% 
   select(sample, organism, cell_id, band, f_l, area) %>% 
   unique() %>% 
   filter(!is.na(band)) %>%
@@ -201,94 +292,25 @@ cd_pc_data_summarized2 <- cd_pc_data2 %>%
     cd_frac = CD / (CH + CD),
     cd_pc = cd_frac * 100)
  
-```
-
-```{r}
-p1 <- cd_pc_data_summarized %>% 
-  filter(organism != "Mbcal") %>% 
-  filter(sample != "Mb_40_24") %>% 
-  filter(sample != "Mb_20_23") %>% 
-  mutate(f_l = case_when(
-    f_l == 0 ~ 0.00000001,
-    TRUE ~ f_l
-  )) %>% 
-  ggplot(
-    aes(
-      x = as.numeric(f_l),
-      y = cd_pc,
-      color = organism,
-      fill = organism,
-    )
-  ) +
-  geom_point() +
-  facet_wrap(vars(organism)) +
-  coord_cartesian(ylim = c(0,45)) +
-  geom_smooth(
-    method = "lm",
-    formula = "y~x",
-    color = "gray",
-    linetype = "dashed",
-    fill = "gray") +
-  labs(
-    x = "Label Strength",
-    y = "CD%",
-    title = "Area = sum(CD%)"
-  ) +
-  theme_classic() +
-  theme(
-    legend.position = "NA"
-  )
-p1
-```
-
-```{r}
-p2 <- cd_pc_data_summarized2 %>% 
-  filter(organism != "Mbcal") %>% 
-  filter(sample != "Mb_40_24") %>% 
-  filter(sample != "Mb_20_23") %>% 
-  mutate(f_l = case_when(
-    f_l == 0 ~ 0.00000001,
-    TRUE ~ f_l
-  )) %>% 
-  ggplot(
-    aes(
-      x = as.numeric(f_l),
-      y = cd_pc,
-      color = organism,
-      fill = organism,
-    )
-  ) +
-  geom_point() +
-  facet_wrap(vars(organism)) +
-  coord_cartesian(ylim = c(0,45)) +
-  geom_smooth(
-    method = "lm",
-    formula = "y~x",
-    color = "gray",
-    linetype = "dashed",
-    fill = "gray") +
-  labs(
-    x = "Label Strength",
-    y = "CD%",
-    title = "Area = ∆x * mean(CD%)"
-  ) +
-  theme_classic() +
-  theme(
-    legend.position = "NA"
-  )
-p2
+ 
 ```
 
 
-```{r}
-cowplot::plot_grid(
-  p1, p2,
-  nrow = 2
-)
-```
+# Export
 
 ```{r}
-cd_pc_data_summarized2 %>% 
+saveRDS(cd_pc_data, file = "cache/cd_pc_data.RDS")
+saveRDS(cd_pc_poly, file = "cache/cd_pc_poly.RDS")
+
+saveRDS(cd_pc_data_summarized, file = "cache/cd_pc_data_summarized.RDS")
+saveRDS(cd_pc_poly_summarized, file = "cache/cd_pc_poly_summarized.RDS")
+```
+
+
+# OPTIONAL: Investigate data with plots
+
+```{r}
+raw_data_plot <- cd_pc_data_summarized %>% 
   filter(organism != "Mbcal") %>% 
   filter(sample != "Mb_40_24") %>% 
   filter(sample != "Mb_20_23") %>% 
@@ -314,9 +336,8 @@ cd_pc_data_summarized2 %>%
     method = "lm",
     formula = y ~ splines::bs(x, 3),
     color = "black",
-    size = 1,
-    fill = "gray",
-    linetype = "dashed"
+    size = 0.5,
+    fill = "gray"
   ) +
   ggdist::stat_halfeye(
     color = "black",
@@ -328,11 +349,112 @@ cd_pc_data_summarized2 %>%
   labs(
     x = "Label Strength",
     y = "CD%",
-    title = "Area = ∆x * mean(CD%)"
+    title = "Raw Data"
   ) +
   theme_classic() +
   theme(
     legend.position = "NA"
   )
+raw_data_plot
+```
+
+```{r}
+poly_smoothed_plot <- cd_pc_poly_summarized %>% 
+  filter(organism != "Mbcal") %>% 
+  filter(sample != "Mb_40_24") %>% 
+  filter(sample != "Mb_20_23") %>% 
+  mutate(f_l = case_when(
+    f_l == 0 ~ 0.00000001,
+    TRUE ~ f_l
+  )) %>% 
+  ggplot(
+    aes(
+      x = as.numeric(f_l),
+      y = cd_pc,
+      color = organism,
+      fill = organism,
+    )
+  ) +
+  geom_jitter(
+    height = 0,
+    width = 1,
+    alpha = 0.5,
+    size = 0.3
+  ) +
+  geom_smooth(
+    method = "lm",
+    formula = y ~ splines::bs(x, 3),
+    color = "black",
+    size = .5,
+    fill = "gray"
+  ) +
+  ggdist::stat_halfeye(
+    color = "black",
+    scale = 0.75,
+    position = position_nudge(x = 2)
+  ) +
+  facet_wrap(vars(organism)) +
+  coord_cartesian(ylim = c(0,45)) +
+  labs(
+    x = "Label Strength",
+    y = "CD%",
+    title = "Polynomial Smoothed"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA"
+  )
+poly_smoothed_plot
+```
+
+```{r}
+cowplot::plot_grid(raw_data_plot, poly_smoothed_plot, nrow = 2)
+```
+
+```{r}
+plot_raman_sample_ridges <- function(df, sample_name) {
+  df %>% 
+    filter(sample == sample_name) %>% 
+    ggplot(
+      aes(
+        x = wavenumber_cm,
+        y = cell_id,
+        height = intensity,
+        group = cell_id,
+        fill = cell_id
+        )
+    ) +
+    geom_ridgeline(
+      scale = 0.1
+    ) +
+    scale_fill_viridis_d(
+    ) +
+    labs(
+      x = "Wavenumber",
+      y = "",
+      title = sample_name
+    ) +
+    theme_classic() +
+    theme(
+      axis.text.y = element_blank(),
+      axis.title.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.line.y = element_blank(),
+      legend.position = "NA"
+    )
+}
+
+thy_00 <- plot_raman_sample_ridges(cd_pc_poly, "Thy_00_07")
+thy_10 <- plot_raman_sample_ridges(cd_pc_poly, "Thy_10_08")
+thy_20 <- plot_raman_sample_ridges(cd_pc_poly, "Thy_20_09")
+thy_30 <- plot_raman_sample_ridges(cd_pc_poly, "Thy_30_10")
+thy_40 <- plot_raman_sample_ridges(cd_pc_poly, "Thy_40_11")
+thy_50 <- plot_raman_sample_ridges(cd_pc_poly, "Thy_50_12")
+
+cowplot::plot_grid(
+  thy_00, thy_10, thy_30,
+  thy_40, thy_50,
+  ncol = 2
+)
 ```
 
