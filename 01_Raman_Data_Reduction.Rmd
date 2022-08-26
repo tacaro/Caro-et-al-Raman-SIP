@@ -244,7 +244,8 @@ cd_pc_data <- raman_cell_data %>%
     mean_intensity = mean(intensity),
     area = case_when(
       band == "CD" ~ mean_intensity * (2300 - 2040),
-      band == "CH" ~ mean_intensity * (3100 - 2800)
+      band == "CH" ~ mean_intensity * (3100 - 2800),
+      band == "SR" ~ mean_intensity * (2700 - 2500)
       )
     ) %>% 
   ungroup()
@@ -256,7 +257,8 @@ cd_pc_poly <- raman_cell_poly %>%
     mean_intensity = mean(intensity),
     area = case_when(
       band == "CD" ~ mean_intensity * (2300 - 2040),
-      band == "CH" ~ mean_intensity * (3100 - 2800)
+      band == "CH" ~ mean_intensity * (3100 - 2800),
+      band == "SR" ~ mean_intensity * (2700 - 2500)
       )
     ) %>% 
   ungroup()
@@ -276,8 +278,23 @@ cd_pc_data_summarized <- cd_pc_data %>%
     values_from = area
   ) %>% 
   mutate(
+    # Apply the average silent region noise correction
+    CD_corr = CD - SR,
+    CH_corr = CH - SR,
+    CD_corr = case_when(
+      CD_corr < 0 ~ 0,
+      TRUE ~ CD_corr),
+    CH_corr = case_when(
+      CH_corr < 0 ~ 0,
+      TRUE ~ CH_corr
+    )
+  ) %>% 
+  mutate(
     cd_frac = CD / (CH + CD),
-    cd_pc = cd_frac * 100)
+    cd_pc = cd_frac * 100,
+    cd_frac_corr = CD_corr / (CH_corr + CD_corr),
+    cd_pc_corr = cd_frac_corr * 100
+    )
 
 cd_pc_poly_summarized <- cd_pc_poly %>% 
   select(sample, organism, cell_id, band, f_l, area) %>% 
@@ -289,8 +306,23 @@ cd_pc_poly_summarized <- cd_pc_poly %>%
     values_from = area
   ) %>% 
   mutate(
+    # Apply the average silent region noise correction
+    CD_corr = CD - SR,
+    CH_corr = CH - SR,
+    CD_corr = case_when(
+      CD_corr < 0 ~ 0,
+      TRUE ~ CD_corr),
+    CH_corr = case_when(
+      CH_corr < 0 ~ 0,
+      TRUE ~ CH_corr
+    )
+  ) %>% 
+  mutate(
     cd_frac = CD / (CH + CD),
-    cd_pc = cd_frac * 100)
+    cd_pc = cd_frac * 100,
+    cd_frac_corr = CD_corr / (CH_corr + CD_corr),
+    cd_pc_corr = cd_frac_corr * 100
+    )
  
  
 ```
@@ -456,5 +488,108 @@ cowplot::plot_grid(
   thy_40, thy_50,
   ncol = 2
 )
+```
+
+
+## Compare SR corrected values
+```{r}
+poly_smoothed_plot_corr <- cd_pc_poly_summarized %>% 
+  filter(organism != "Mbcal") %>% 
+  filter(sample != "Mb_40_24") %>% 
+  filter(sample != "Mb_20_23") %>% 
+  mutate(f_l = case_when(
+    f_l == 0 ~ 0.00000001,
+    TRUE ~ f_l
+  )) %>% 
+  select(sample, organism, f_l, cell_id, cd_pc, cd_pc_corr) %>%
+  pivot_longer(
+    cols = c(cd_pc, cd_pc_corr),
+    values_to = "cd_percent",
+    names_to = "corrected") %>%
+  ggplot(
+    aes(
+      x = as.numeric(f_l),
+      y = cd_percent,
+      color = corrected,
+      fill = corrected,
+    )
+  ) +
+  geom_jitter(
+    height = 0,
+    width = 1,
+    alpha = 0.5,
+    size = 0.3
+  ) +
+  ggdist::stat_halfeye(
+    alpha = 0.6,
+    scale = 0.75,
+    position = position_nudge(x = 2)
+  ) +
+  scale_color_viridis_d(option = "plasma", end = 0.7) +
+  scale_fill_viridis_d(option = "plasma", end = 0.7) +
+  facet_wrap(vars(organism)) +
+  coord_cartesian(ylim = c(0,45)) +
+  labs(
+    x = "Label Strength",
+    y = "CD%",
+    title = "Polynomial Smoothed"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "bottom"
+  )
+poly_smoothed_plot_corr
+
+
+```
+
+```{r}
+raw_plot_corr <- cd_pc_data_summarized %>% 
+  filter(organism != "Mbcal") %>% 
+  filter(sample != "Mb_40_24") %>% 
+  filter(sample != "Mb_20_23") %>% 
+  mutate(f_l = case_when(
+    f_l == 0 ~ 0.00000001,
+    TRUE ~ f_l
+  )) %>% 
+  select(sample, organism, f_l, cell_id, cd_pc, cd_pc_corr) %>%
+  pivot_longer(
+    cols = c(cd_pc, cd_pc_corr),
+    values_to = "cd_percent",
+    names_to = "corrected") %>%
+  ggplot(
+    aes(
+      x = as.numeric(f_l),
+      y = cd_percent,
+      color = corrected,
+      fill = corrected,
+    )
+  ) +
+  geom_jitter(
+    height = 0,
+    width = 1,
+    alpha = 0.5,
+    size = 0.3
+  ) +
+  ggdist::stat_halfeye(
+    alpha = 0.6,
+    scale = 0.75,
+    position = position_nudge(x = 2)
+  ) +
+  scale_color_viridis_d(option = "plasma", end = 0.7) +
+  scale_fill_viridis_d(option = "plasma", end = 0.7) +
+  facet_wrap(vars(organism)) +
+  coord_cartesian(ylim = c(0,45)) +
+  labs(
+    x = "Label Strength",
+    y = "CD%",
+    title = "Polynomial Smoothed"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "bottom"
+  )
+raw_plot_corr
+
 ```
 
