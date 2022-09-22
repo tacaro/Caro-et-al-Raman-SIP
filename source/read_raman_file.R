@@ -21,7 +21,8 @@ read_raman_file <- function(file) {
     mutate(
       band = case_when(
         between(wavenumber_cm, 2040, 2300) ~ "CD",
-        between(wavenumber_cm, 2800, 3100) ~ "CH"
+        between(wavenumber_cm, 2800, 3100) ~ "CH",
+        between(wavenumber_cm, 2500, 2700) ~ "SR"
       )
     )
 }
