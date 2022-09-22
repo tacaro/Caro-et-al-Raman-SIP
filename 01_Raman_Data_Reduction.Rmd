@@ -461,6 +461,7 @@ plot_raman_sample_ridges <- function(df, sample_name) {
     ) +
     scale_fill_viridis_d(
     ) +
+    coord_cartesian(ylim = c(0,50)) +
     labs(
       x = "Wavenumber",
       y = "",
@@ -591,5 +592,54 @@ raw_plot_corr <- cd_pc_data_summarized %>%
   )
 raw_plot_corr
 
+```
+
+## Plot typical raman spectrum for each label strength
+
+Create averaged data:
+```{r}
+cd_pc_data_mn <- cd_pc_data %>% 
+  group_by(sample, wavenumber_cm) %>% 
+  summarize(
+    organism = organism,
+    f_l = f_l,
+    intensity = mean(intensity, na.rm = TRUE)
+  ) %>% 
+  ungroup()
+```
+
+```{r}
+cd_pc_data %>% 
+  filter(sample == "Thy_50_12") %>% 
+  ggplot(
+    aes(
+      x = wavenumber_cm,
+      y = intensity
+    )
+  ) +
+  geom_line(alpha = 0.05) +
+  geom_line(
+    data = cd_pc_data_mn %>% filter(sample == "Thy_50_12"),
+    color = "red"
+    ) +
+  labs(
+    x = TeX("Wavenumber cm $^{-1}$"),
+    y = "Intensity (AU)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+cd_pc_data_mn %>% 
+  ggplot(
+    aes(
+      x = wavenumber_cm,
+      y = intensity,
+      color = as.factor(f_l)
+    )
+  ) +
+  geom_line() +
+  facet_wrap(vars(organism), scales = "free_y") +
+  scale_color_viridis_d(end = 0.75)
 ```
 
