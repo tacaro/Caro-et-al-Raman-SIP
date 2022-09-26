@@ -631,6 +631,7 @@ cd_pc_data %>%
 
 ```{r}
 cd_pc_data_mn %>% 
+  filter(sample != "Mb_40_24", organism != "Mbcal") %>% 
   ggplot(
     aes(
       x = wavenumber_cm,
@@ -639,7 +640,11 @@ cd_pc_data_mn %>%
     )
   ) +
   geom_line() +
-  facet_wrap(vars(organism), scales = "free_y") +
+  facet_wrap(
+    vars(organism), 
+    scales = "free_y",
+    ncol = 1
+    ) +
   scale_color_viridis_d(end = 0.75)
 ```
 
