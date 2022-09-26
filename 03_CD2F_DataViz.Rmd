@@ -17,29 +17,39 @@ library(cowplot)
 library(latex2exp)
 library(ggside)
 library(ggsci)
+library(plotly)
 ```
 
 ## Load from cache
 
 ```{r}
 co_registered <- readRDS("cache/co_registered.RDS")
+cd_pc_data <- readRDS("cache/cd_pc_data.RDS")
+```
+
+## Colors
+```{r}
+organism_colors <- c("#008c54", "#ffaa00")
 ```
 
 # Plot
 
+## Co-registered
+
 ```{r}
-co_registered %>% 
-  # Remove this problematic sample
-  filter(sample != "Mb_20_23") %>% 
+p_co_registered <- co_registered %>% 
+  # Plot it!
   ggplot(
-    aes(x = Ratio_2Hx1H * 100,
+    aes(x = at2H_percent,
         y = cd_pc,
         color = as.factor(f_l),
-        group = organism.x
+        group = organism.x,
+        label = cell_id
     )
   ) +
   geom_point(
-    alpha = 75
+    alpha = 0.5,
+    size = 2
   ) +
   geom_abline(
     slope = 1,
@@ -69,5 +79,158 @@ co_registered %>%
     legend.position = "bottom",
     ggside.panel.scale = 2
   )
+p_co_registered
+```
+
+### Plotly
+```{r}
+ggplotly(p = p_co_registered)
+```
+
+## CD FL
+
+```{r}
+p_cd_fl <- co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(x = f_l,
+        y = cd_pc,
+        color = organism.x
+        )
+  ) +
+  labs(
+    x = latex2exp::TeX("$^2F$ Growth Water"),
+    y = latex2exp::TeX("$^2F_{Raman}$")
+  ) +
+  facet_wrap(
+    vars(organism.x), 
+    scales = "free") +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  geom_point(
+    alpha = 0.5,
+    position = position_jitter(width = 2)
+  ) +
+  ggdist::stat_pointinterval(
+    position = position_nudge(x = 0.2),
+    color = "black"
+  ) +
+  scale_color_manual(values = organism_colors) + 
+  scale_x_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+    ) +
+  scale_y_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA",
+    strip.background = element_blank()
+  )
+p_cd_fl
+```
+
+## 2F FL
+
+```{r}
+co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(x = f_l,
+        y = at2H_percent,
+        color = organism.x
+        )
+  ) +
+  facet_wrap(vars(organism.x), scales = "free") +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  geom_point(
+    alpha = 0.5,
+    position = position_jitter(width = 2)
+  ) +
+  scale_color_manual(values = organism_colors) + 
+  scale_x_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+    ) +
+  scale_y_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+  ) +
+  labs(
+    x = latex2exp::TeX("$^2F$ Growth Water"),
+    y = latex2exp::TeX("$^2F_{nanoSIMS}$")
+  ) +
+  ggdist::stat_pointinterval(
+    position = position_nudge(x = 0.2),
+    color = "black"
+  ) +
+  
+  theme_classic() +
+  theme(
+    legend.position = "NA",
+    strip.background = element_blank()
+  )
+  
+```
+
+## Cowplot: CD-FL and 2F-FL
+
+```{r}
+cowplot::plot_grid(
+  p_cd_fl,
+  p_2f_fl
+)
+```
+
+## 2R FL
+
+```{r}
+co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(x = as.factor(f_l),
+        y = `Ratio_2Hx1H`,
+        color = organism.x
+        )
+  ) +
+  facet_wrap(vars(organism.x)) +
+  geom_point(
+    alpha = 0.25
+  ) +
+  scale_color_manual(values = organism_colors) + 
+  labs(
+    x = latex2exp::TeX("$^2F$ Growth Water"),
+    y = latex2exp::TeX("$^2R_{nanoSIMS}$")
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA",
+    strip.background = element_blank()
+  )
+  
+```
+
+
+## Raman spectrum
+
+```{r}
+cd_pc_data %>% filter(cell_id == "Mb_50_18_38") %>% 
+  ggplot(aes(
+    x = wavenumber_cm,
+    y = intensity
+  )) +
+  geom_line() +
+  theme_minimal()
 ```
 
