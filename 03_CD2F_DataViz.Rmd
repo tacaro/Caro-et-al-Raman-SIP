@@ -29,6 +29,7 @@ co_registered <- readRDS("cache/co_registered.RDS")
 
 ```{r}
 co_registered %>% 
+  # Remove this problematic sample
   filter(sample != "Mb_20_23") %>% 
   ggplot(
     aes(x = Ratio_2Hx1H * 100,
@@ -44,7 +45,7 @@ co_registered %>%
     slope = 1,
     linetype = "dashed",
     color = "gray",
-    alpha = 0.5,
+    alpha = 1,
   ) +
   stat_smooth(
     formula = y ~ x,
