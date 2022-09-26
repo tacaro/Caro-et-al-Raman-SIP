@@ -139,7 +139,7 @@ p_cd_fl
 ## 2F FL
 
 ```{r}
-co_registered %>% 
+p_2f_fl <- co_registered %>% 
   filter(!is.na(f_l)) %>% 
   ggplot(
     aes(x = f_l,
@@ -175,13 +175,12 @@ co_registered %>%
     position = position_nudge(x = 0.2),
     color = "black"
   ) +
-  
   theme_classic() +
   theme(
     legend.position = "NA",
     strip.background = element_blank()
   )
-  
+p_2f_fl
 ```
 
 ## Cowplot: CD-FL and 2F-FL
@@ -189,7 +188,8 @@ co_registered %>%
 ```{r}
 cowplot::plot_grid(
   p_cd_fl,
-  p_2f_fl
+  p_2f_fl,
+  ncol = 1
 )
 ```
 
