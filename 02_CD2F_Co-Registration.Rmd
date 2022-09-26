@@ -36,7 +36,14 @@ cd_pc_summarized <- readRDS("cache/cd_pc_data_summarized.RDS")
 co_registered <- roi_data_joined %>% 
   left_join(cd_pc_summarized,
             by = "cell_id") %>% 
-  select(-c(`organism.y`))
+  select(-c(`organism.y`)) %>% 
+  # create an "Atom Percent" column
+  mutate(
+    # calculate fractional abundance
+    frac2H = (`Ratio_2Hx1H` / 1 + `Ratio_2Hx1H`),
+    # calculate fractional abundance (at%)
+    at2H_percent = frac2H * 100
+    )
 ```
 
 ```{r}
