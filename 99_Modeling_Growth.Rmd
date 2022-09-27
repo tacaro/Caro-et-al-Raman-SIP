@@ -1,0 +1,81 @@
+---
+title: "99_Modeling_Growth"
+author: "Tristan Caro"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Setup
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+```
+
+# Model Growth
+
+## Microbial Activity Measurements using Lipid Stable Isotope Probing (SIP)
+
+The changes in microbial biomass $B$ are governed by the specific growth rate $µ$ (biomass increase rate), turnover ("maintenance") rate $\omega$ (biomass synthesis rate in excess of growth). We can express these as differential equations:
+
+$$
+\frac{dB}{dt} = (µ + \omega - \omega - d) \cdot B = (µ - d)\cdot B
+$$ In other words: the change in total biomass $B$ is equal to the current biomass times replication rate minus death, where turnover "maintenance" $\omega$ results in no net biomass production.
+
+The rate of change in *new* biomass is the difference between the flux terms of biomass synthesis and biomass removal:
+
+$$
+\frac{dB_{new}}{dt} = (µ + \omega) \cdot B - (d+\omega)\cdot B_{new}
+$$ The first term containing µ, $\omega$, and $B$ describes biomass synthesis flux and is equal to replication plus maintenance rate. The second term containing $d$, $\omega$, and $B_{new}$ describes removal of biomass.
+
+We can define a differential equation for the fraction of new vs. total biomass using the quotient rule and solving via integration (omitted for brevity - see *Kopf et al. 2016 Supplemental* for derivation).
+
+$$
+f^`_{B_{new}} (t) = (µ + \omega) \cdot e^{-(µ + \omega) \cdot t} \\
+f_{B_{new}} (t) = 1 - e ^{-(µ + \omega) \cdot t}
+$$
+
+Consider a case of a population that is exposed to an isotopically enriched tracer (in our case, this is deuterium-enriched water $^2H$). The $^2H$ composition of newly enriched biomass will have a distinct hydrogen isotope composition that reflects tracer addition -- $^2F_{B_{new}}$. We can use mass balance between the newly produced and original biomass to determine the overall isotopic composition of biomass at time t:
+
+$$
+^2F_B (t) = \frac{B_{new}}{B} \cdot ^2F_{B_{new}} + \frac{B_{original}}{B} \cdot ^2F_{B_{original}}
+$$ The terms containing $B_{new}$ and $B_{original}$ represent the mass fractions of new and original biomass, respectively.
+
+In the (simplified) case where new biomass mirrors the isotopic composition of the tracer solution (heavy water), we can assume that $^2F_{B_{new}} = ^2F_{w_{spiked}}$, where $^2F_{w_{spiked}}$ is the fractional abundance of $^2H$ in the tracer solution.
+
+Assuming that maintenance turnover is zero ($\omega = 0$), we can simplify to:
+
+$$
+^2F_{B} (t) = ^2F_{w_{spiked}} \cdot (1 - e^{-µt}) + ^2F_{B_{original}} \cdot e^{-µt}
+$$
+
+### Plot Isotopic Enrichment of Biomass
+
+Using the above equation, plot isotopic enrichment of biomass as a function of time.
+
+```{r}
+biomass_estimate <- tibble(
+  t = seq(0, 5, by = 0.01), # unit time (e.g. days)
+  f_wspiked = 1, # consider tracer to be pure
+  u = 1, # growth rate in unit days^-1
+  gen = log(2)/u,
+  f_Boriginal = 0,
+  f_B = (f_wspiked * (1 - exp(-u*t)) + (f_Boriginal * exp(-u*t)))
+)
+
+ggplot(data = biomass_estimate, 
+       aes(x = t,
+           y = f_B * 100)
+       ) +
+  geom_line() +
+  # one generation:
+  geom_vline(aes(xintercept = gen), alpha = 0.5) +
+  # five generations:
+  geom_vline(aes(xintercept = gen * 5), alpha = 0.5) +
+  ylab("Isotopic Enrichment (%)") +
+  xlab("Time") +
+  theme_classic()
+```
