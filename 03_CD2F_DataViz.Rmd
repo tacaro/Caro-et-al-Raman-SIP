@@ -18,6 +18,7 @@ library(latex2exp)
 library(ggside)
 library(ggsci)
 library(plotly)
+library(ggdist)
 ```
 
 ## Load from cache
@@ -233,4 +234,5 @@ cd_pc_data %>% filter(cell_id == "Mb_50_18_38") %>%
   geom_line() +
   theme_minimal()
 ```
+
 
