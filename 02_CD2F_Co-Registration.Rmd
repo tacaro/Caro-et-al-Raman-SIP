@@ -42,10 +42,9 @@ co_registered <- roi_data_joined %>%
   select(-c(`organism.y`)) %>% 
   # create an "Atom Percent" column
   mutate(
-    # calculate fractional abundance
-    frac2H = (`Ratio_2Hx1H` / 1 + `Ratio_2Hx1H`),
     # calculate fractional abundance (at%)
-    at2H_percent = frac2H * 100
+    at2H_percent_dtc = frac_2H_dtc * 100,
+    at2H_percent = frac_2H * 100
     ) %>% 
   # Exclude cells on the excluded cells list
   filter(!cell_id %in% excluded_cells) %>% 
