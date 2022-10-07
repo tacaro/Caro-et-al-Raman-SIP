@@ -193,10 +193,12 @@ roi_data_joined <- cell_metadata %>%
   ) %>% 
   # Recalculate 2R and calculate 2F
   mutate(
-    `Ratio_2Hx1H2` = `2H`/`1H`,
-    `Ratio_2Hx1H_dtc` = `2H_dtc`/`1H_dtc`,
-    `frac_2H` = `2H`/ (`1H` + `2H`),
-    `frac_2H_dtc` = `2H_dtc`/ (`1H_dtc` + `2H_dtc`)
+    Ratio_2Hx1H = `2H`/`1H`, # Replace the original 'Ratio_2Hx1H' because that is calculated as 2F in the processing script
+    Ratio_2Hx1H_dtc = `2H_dtc`/`1H_dtc`,
+    frac_2H = `2H`/ (`1H` + `2H`),
+    frac_2H_dtc = `2H_dtc`/ (`1H_dtc` + `2H_dtc`),
+    at2H_percent_dtc = frac_2H_dtc * 100,
+    at2H_percent = frac_2H * 100
   )
 
 ```
@@ -216,7 +218,7 @@ evaluate_dtc <- roi_data_joined %>%
 ```
 
 
-## Save to cache
+# Save to cache
 ```{r}
 # Cache it!
 saveRDS(roi_data_joined, "cache/roi_data_joined.RDS")
@@ -225,6 +227,7 @@ saveRDS(roi_data_joined, "cache/roi_data_joined.RDS")
 
 
 # OPTIONAL: Explore with some plots
+
 ```{r}
 p_roi_data <- roi_data %>% 
   filter(organism == "T. hydrogeniphilus") %>% 
