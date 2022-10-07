@@ -17,7 +17,6 @@ library(cowplot)
 library(latex2exp)
 library(ggside)
 library(ggsci)
-library(plotly)
 library(ggdist)
 ```
 
@@ -39,9 +38,10 @@ organism_colors <- c("#008c54", "#ffaa00")
 
 ```{r}
 p_co_registered <- co_registered %>% 
+  filter(!is.na(f_l)) %>% 
   # Plot it!
   ggplot(
-    aes(x = at2H_percent,
+    aes(x = at2H_percent_dtc,
         y = cd_pc,
         color = as.factor(f_l),
         group = organism.x,
@@ -72,20 +72,15 @@ p_co_registered <- co_registered %>%
   scale_color_viridis_d(end = 0.9) +
   theme_bw() +
   labs(
-    x = TeX("$^2F$ (atom %)"),
+    x = latex2exp::TeX("$^2F$ (atom %)"),
     y = "CD% (Raman)",
-    color = TeX("Label Strength $^2F$ (atom %)")
+    color = latex2exp::TeX("Label Strength $^2F$ (atom %)")
   ) +
   theme(
     legend.position = "bottom",
     ggside.panel.scale = 2
   )
 p_co_registered
-```
-
-### Plotly
-```{r}
-ggplotly(p = p_co_registered)
 ```
 
 ## CD FL
