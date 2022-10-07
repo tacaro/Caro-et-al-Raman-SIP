@@ -40,12 +40,6 @@ co_registered <- roi_data_joined %>%
   left_join(cd_pc_summarized,
             by = "cell_id") %>% 
   select(-c(`organism.y`)) %>% 
-  # create an "Atom Percent" column
-  mutate(
-    # calculate fractional abundance (at%)
-    at2H_percent_dtc = frac_2H_dtc * 100,
-    at2H_percent = frac_2H * 100
-    ) %>% 
   # Exclude cells on the excluded cells list
   filter(!cell_id %in% excluded_cells) %>% 
   # Exclude samples on the excluded samples list
