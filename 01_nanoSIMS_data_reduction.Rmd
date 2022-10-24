@@ -11,6 +11,54 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Introduction
+
+Here we recalculate isotope ratio by ion counts (despite that our processing script already did it).
+
+$$
+^2R = \frac{^2H}{^1H}
+$$
+
+We also calculate fractional abundance:
+
+$$
+^2F = \frac{^2H}{^2H + ^1H}
+$$
+
+fractional abundance is, later on, reported as atom percent:
+
+$$
+^2F \% = {^2F} * 100 \%
+$$
+
+Here we also apply the dead time correction (DTC) to our ion counts. DT is the time between ion pulses in which an electron multiplier is unable to capture additional signal while the previous signal is being processed. When a secondary ion hits the conversion dynode, it ejects an electron that ejects further electrons across the subsequent dynodes. This results in an electron pulse at the pre-amplifier electronics. The time it takes to record this pulse, the detector cannot measure incoming ions arriving at the conversion dynode. This is problematic when the secondary ion count rate is high -- effectively depressing the recorded signal. Our nanoSIMS instrument used the default value of 44 ns DT. The effect of DT should be minimal on our samples and a simple linear correction can be used. This correction is defined as follows where $C_{DTC}$ is ion counts per second (cps) DTC-corrected; $C_{raw}$ is raw cps as reported by the instrument, and $\tau$ is the detector DT in ns. (Adapted from Kilburn, M.R., Clode, P.L. (2014). Elemental and Isotopic Imaging of Biological Samples Using NanoSIMS. In: Kuo, J. (eds) Electron Microscopy. Methods in Molecular Biology, vol 1117. Humana Press, Totowa, NJ. https://doi.org/10.1007/978-1-62703-776-1_33).
+
+$$
+C_{DTC} = \frac{C_{raw}}{(1-\tau \cdot C_{raw})}
+$$
+
+Alternatively defined as:
+
+$$
+N = \frac{N_m}{1 - N_m \cdot \tau / T}
+$$
+
+where N is the real number of secondary ions, $N_m$ is the number of secondary ions **m**easured, $\tau$ is deadtime (seconds), and T is dwell time (seconds per pixel).
+
+
+
+
+DTC is applied as follows:
+
+```
+# counts of the ion per second
+cps_ion = N/(analysis.px.s * PIXELSi)
+
+# dead time corrected (NOTE: ideally px by px but doing it by ROI is sufficient approximation here - max error < 1 ppm)
+N_dc = N / (1 - cps_ion * deadtime.ns * 1e-9) 
+```
+
+
 # Setup
 
 ## Clear the environment
@@ -117,51 +165,6 @@ paste("These are the nanoSIMS_file_ids that exist in the cell_metadata.xlsx but 
 
 
 ## Join cell_metadata to roi_data
-
-Here we recalculate isotope ratio by ion counts (despite that our processing script already did it).
-
-$$
-^2R = \frac{^2H}{^1H}
-$$
-
-We also calculate fractional abundance:
-
-$$
-^2F = \frac{^2H}{^2H + ^1H}
-$$
-
-fractional abundance is, later on, reported as atom percent:
-
-$$
-^2F \% = {^2F} * 100 \%
-$$
-
-Here we also apply the dead time correction (DTC) to our ion counts. DT is the time between ion pulses in which an electron multiplier is unable to capture additional signal while the previous signal is being processed. When a secondary ion hits the conversion dynode, it ejects an electron that ejects further electrons across the subsequent dynodes. This results in an electron pulse at the pre-amplifier electronics. The time it takes to record this pulse, the detector cannot measure incoming ions arriving at the conversion dynode. This is problematic when the secondary ion count rate is high -- effectively depressing the recorded signal. Our nanoSIMS instrument used the default value of 44 ns DT. The effect of DT should be minimal on our samples and a simple linear correction can be used. This correction is defined as follows where $C_{DTC}$ is ion counts per second (cps) DTC-corrected; $C_{raw}$ is raw cps as reported by the instrument, and $\tau$ is the detector DT in ns. (Adapted from Kilburn, M.R., Clode, P.L. (2014). Elemental and Isotopic Imaging of Biological Samples Using NanoSIMS. In: Kuo, J. (eds) Electron Microscopy. Methods in Molecular Biology, vol 1117. Humana Press, Totowa, NJ. https://doi.org/10.1007/978-1-62703-776-1_33).
-
-$$
-C_{DTC} = \frac{C_{raw}}{(1-\tau \cdot C_{raw})}
-$$
-
-Alternatively defined as:
-
-$$
-N = \frac{N_m}{1 - N_m \cdot \tau / T}
-$$
-
-where N is the real number of secondary ions, $N_m$ is the number of secondary ions **m**easured, $\tau$ is deadtime (seconds), and T is dwell time (seconds per pixel).
-
-
-
-
-DTC is applied as follows:
-
-```
-# counts of the ion per second
-cps_ion = N/(analysis.px.s * PIXELSi)
-
-# dead time corrected (NOTE: ideally px by px but doing it by ROI is sufficient approximation here - max error < 1 ppm)
-N_dc = N / (1 - cps_ion * deadtime.ns * 1e-9) 
-```
 
 
 ```{r}
@@ -309,7 +312,8 @@ p_roi_data3
 ```
 
 ### ROI Counts (Raw)
-```{r}
+
+```{r ion counts histogram} 
 roi_data_joined %>% 
   ggplot(
     aes(x = `1H`)
