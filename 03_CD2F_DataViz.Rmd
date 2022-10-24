@@ -7,7 +7,15 @@ editor_options:
   chunk_output_type: console
 ---
 
+
 # Setup
+
+## Clear the environment
+
+```{r}
+rm(list=ls())
+```
+
 
 ## Load libraries
 
@@ -36,13 +44,13 @@ organism_colors <- c("#008c54", "#ffaa00")
 
 ## Co-registered
 
-```{r}
+```{r co-registered_faceted}
 p_co_registered <- co_registered %>% 
   filter(!is.na(f_l)) %>% 
   # Plot it!
   ggplot(
     aes(x = at2H_percent_dtc,
-        y = cd_pc,
+        y = cd_pc_corr,
         color = as.factor(f_l),
         group = organism.x,
         label = cell_id
@@ -62,19 +70,24 @@ p_co_registered <- co_registered %>%
     formula = y ~ x,
     #formula = y ~ splines::bs(x, 3),
     size = 0.5,
-    method = 'lm'
+    method = 'lm',
+    se = FALSE,
+    color = "red"
   ) +
   facet_wrap(vars(organism.x)) +
   coord_cartesian(
     xlim = c(0,50), 
     ylim = c(0,50)
   ) +
-  scale_color_viridis_d(end = 0.9) +
+  scale_color_viridis_d(
+    end = 0.9,
+    option = "magma"
+    ) +
   theme_bw() +
   labs(
-    x = latex2exp::TeX("$^2F$ (atom %)"),
-    y = "CD% (Raman)",
-    color = latex2exp::TeX("Label Strength $^2F$ (atom %)")
+    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$")
   ) +
   theme(
     legend.position = "bottom",
@@ -83,6 +96,91 @@ p_co_registered <- co_registered %>%
 p_co_registered
 ```
 
+```{r linear model}
+co_reg_fit <- broom::tidy(lm(data = co_registered, cd_pc_corr  ~ at2H_percent_dtc))
+
+print_lm_summary <- function(df) {
+  paste0("y = ", round(df$estimate[2], 2), "x + ", round(df$estimate[1], 2))
+}
+
+print_lm_summary(co_reg_fit)
+
+co_reg_fit_thy <- broom::tidy(
+  lm(data = co_registered %>%
+       filter(
+         organism.x == "T. hydrogeniphilus"
+        ), 
+     cd_pc_corr  ~ at2H_percent_dtc)
+  )
+
+co_reg_fit_mb <- broom::tidy(
+  lm(data = co_registered %>%
+       filter(
+         organism.x == "M. NSHQ14"
+        ), 
+     cd_pc_corr  ~ at2H_percent_dtc)
+  )
+
+print_lm_summary(co_reg_fit_thy)
+print_lm_summary(co_reg_fit_mb)
+```
+
+
+```{r co-registered-combined}
+p_co_registered2 <- co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  # Plot it!
+  ggplot(
+    aes(x = at2H_percent_dtc,
+        y = cd_pc_corr,
+        label = cell_id,
+    )
+  ) +
+  geom_point(
+    aes(
+      color = as.factor(f_l),
+      #shape = organism.x
+      ),
+    alpha = 9,
+    size = 3
+  ) +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  stat_smooth(
+    formula = y ~ x,
+    #formula = y ~ splines::bs(x, 3),
+    size = 0.5,
+    method = 'lm',
+    se = TRUE,
+    color = "red"
+  ) +
+  coord_cartesian(
+    xlim = c(0,40), 
+    ylim = c(0,40)
+  ) +
+  scale_color_viridis_d(
+    end = 0.9,
+    option = "magma"
+    ) +
+  theme_bw() +
+  labs(
+    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = "Label Strength (% D2O)"
+  ) +
+  theme(
+    legend.position = c(0.8, 0.25),
+    legend.background = element_rect(color = "black"),
+    legend.title = element_text(size = 10)
+  )
+p_co_registered2
+```
+
+
 ## CD FL
 
 ```{r}
@@ -90,7 +188,7 @@ p_cd_fl <- co_registered %>%
   filter(!is.na(f_l)) %>% 
   ggplot(
     aes(x = f_l,
-        y = cd_pc,
+        y = cd_pc_corr,
         color = organism.x
         )
   ) +
