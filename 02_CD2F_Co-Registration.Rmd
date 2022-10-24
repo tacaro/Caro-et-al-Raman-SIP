@@ -44,7 +44,6 @@ co_registered <- roi_data_joined %>%
   filter(!cell_id %in% excluded_cells) %>% 
   # Exclude samples on the excluded samples list
   filter(!sample %in% c("Mb_20_23"))
-
 ```
 
 ```{r}
