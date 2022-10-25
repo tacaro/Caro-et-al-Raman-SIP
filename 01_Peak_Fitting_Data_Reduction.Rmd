@@ -1,0 +1,64 @@
+---
+title: "01 Peak Fitting Data Reduction"
+author: "Tristan Caro"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Setup
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(openxlsx)
+
+var_to_str <- function(var) {
+  deparse(substitute(var))
+}
+
+select_fit_data <- function(df) {
+  return(df %>% 
+           select(fit, p, a , g, w) %>% 
+           mutate(
+             id = deparse(substitute(df))
+           ))
+}
+
+```
+
+# Read data
+
+```{r}
+# Define where our large xlsx file is
+path <- "data/Raman/fitted_data/CD_2F_RamanFits_FINAL.xlsx"
+
+# Use openxlsx to get the names of the sheets
+sheets <- openxlsx::getSheetNames(path)
+
+# Read in all the data by lapply-ing the read.xlsx function across all the sheet names
+fitted_data <- lapply(sheets, openxlsx::read.xlsx, xlsxFile=path)
+
+# Assign names to the data frame
+names(fitted_data) <- sheets
+```
+
+```{r}
+Thy_00_07 <- fitted_data$`Thy_00_07!`
+Thy_10_08 <- fitted_data$`Thy_10_08!`
+Thy_20_09 <- fitted_data$`Thy_20_09!`
+Thy_30_10 <- fitted_data$`Thy_30_10!`
+Thy_40_11 <- fitted_data$`Thy_40_11!`
+Thy_50_12 <- fitted_data$`Thy_50_12!`
+
+Mb_00_13 <- fitted_data$`Mb_00_13!`
+Mb_10_14 <- fitted_data$`Mb_10_14!`
+Mb_20_23 <- fitted_data$`Mb_20_23!`
+Mb_30_27 <- fitted_data$`Mb_30_27!`
+Mb_40_y <- fitted_data$`Mb_40_y!`
+Mb_50_18 <- fitted_data$`Mb_50_18!`
+
+
+```
+
