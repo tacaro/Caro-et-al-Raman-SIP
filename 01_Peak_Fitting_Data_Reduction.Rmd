@@ -9,23 +9,56 @@ editor_options:
 
 # Setup
 
+## Libraries
 ```{r}
 library(tidyverse)
 library(readxl)
 library(openxlsx)
+library(magrittr)
+```
 
-var_to_str <- function(var) {
-  deparse(substitute(var))
+## Function definitions
+
+```{r}
+select_fit_params <- function(df) {
+  # the deparse(substitute(x)) changes the argument into a string that can be used
+  sample_id_str = deparse(substitute(df))
+  df %>% 
+    select(fit, p, a , g, w) %>% 
+    # add cell ids:
+    mutate(sample = sample_id_str)
 }
 
-select_fit_data <- function(df) {
-  return(df %>% 
-           select(fit, p, a , g, w) %>% 
-           mutate(
-             id = deparse(substitute(df))
-           ))
+select_fit_areas <- function(df) {
+  # the deparse(substitute(x)) changes the argument into a string that can be used
+  sample_id_str = deparse(substitute(df))
+  df %>% 
+    # there are two "cell" columns - pick the first one
+    select(unique(colnames(.))) %>% 
+    select(cell, CD, contains("CH"), `CD%`) %>% 
+    mutate(sample = sample_id_str) %>% 
+    # remove NA rows introduced from fit dataset
+    filter(!is.na(cell))
 }
 
+select_fit_xy <- function(df) {
+  # change the argument into a string that will be used later
+  sample_id_str = deparse(substitute(df))
+  df %>% 
+    select(unique(colnames(.))) %>% 
+    # exclude columns from the other datasets
+    select(-c(contains("CH"), contains("Peak2"), CD, `CD%`, p, a , g, w, fit)) %>% 
+    # tidy it! pivot the dataset in order to change column names to x values
+    pivot_longer(cols = -c(cell),
+      values_to = "intensity",
+      names_to = "wavenumber_cm") %>%
+    # change these values to numeric, if not already
+    mutate(
+      wavenumber_cm = as.numeric(wavenumber_cm),
+      intensity = as.numeric(intensity)
+    ) %>% 
+    mutate(sample = sample_id_str)
+}
 ```
 
 # Read data
@@ -44,6 +77,12 @@ fitted_data <- lapply(sheets, openxlsx::read.xlsx, xlsxFile=path)
 names(fitted_data) <- sheets
 ```
 
+# Reduce Data
+
+## Pull excel sheets into their own dataframes
+
+I could probably do this more elegantly, but for now this will suffice.
+
 ```{r}
 Thy_00_07 <- fitted_data$`Thy_00_07!`
 Thy_10_08 <- fitted_data$`Thy_10_08!`
@@ -59,6 +98,120 @@ Mb_30_27 <- fitted_data$`Mb_30_27!`
 Mb_40_y <- fitted_data$`Mb_40_y!`
 Mb_50_18 <- fitted_data$`Mb_50_18!`
 
-
 ```
+
+## Separate the data
+
+Here we separate the fit parameters, peak area summaries, and fitted peak paths (xy data) into their own dataframes, identifying them by the sample name.
+```{r}
+fit_data <- bind_rows(
+  select_fit_params(Thy_00_07),
+  select_fit_params(Thy_10_08),
+  select_fit_params(Thy_20_09),
+  select_fit_params(Thy_30_10),
+  select_fit_params(Thy_40_11),
+  select_fit_params(Thy_50_12),
+  select_fit_params(Mb_00_13),
+  select_fit_params(Mb_10_14),
+  select_fit_params(Mb_20_23),
+  select_fit_params(Mb_30_27),
+  select_fit_params(Mb_40_y),
+  select_fit_params(Mb_50_18)
+)
+
+area_data <- bind_rows(
+  select_fit_areas(Thy_00_07),
+  select_fit_areas(Thy_10_08),
+  select_fit_areas(Thy_20_09),
+  select_fit_areas(Thy_30_10),
+  select_fit_areas(Thy_40_11),
+  select_fit_areas(Thy_50_12),
+  select_fit_areas(Mb_00_13),
+  select_fit_areas(Mb_10_14),
+  select_fit_areas(Mb_20_23),
+  select_fit_areas(Mb_30_27),
+  select_fit_areas(Mb_40_y),
+  select_fit_areas(Mb_50_18)
+) %>% 
+  mutate(
+    cell_id = paste0(
+      sample,
+      "_", 
+      sprintf("%02d", cell) # keep the cell id digits in 2 digits!
+      ),
+    f_l = case_when(
+      sample == "Mb_40_y" ~ 40,
+      sample == "Mb_20_x" ~ 20,
+      TRUE ~ as.numeric(
+        str_sub(
+          cell_id, 
+          start = -8, 
+          end = -7)
+        )
+      )
+    ) %>% 
+  # remove the cell column
+  select(-cell) %>% 
+  # reorder the columns
+  relocate(sample, cell_id)
+
+
+
+peak_data_xy <- bind_rows(
+  select_fit_xy(Thy_00_07),
+  select_fit_xy(Thy_10_08),
+  select_fit_xy(Thy_20_09),
+  select_fit_xy(Thy_30_10),
+  select_fit_xy(Thy_40_11),
+  select_fit_xy(Thy_50_12),
+  select_fit_xy(Mb_00_13),
+  select_fit_xy(Mb_10_14),
+  select_fit_xy(Mb_20_23),
+  select_fit_xy(Mb_30_27),
+  select_fit_xy(Mb_40_y),
+  select_fit_xy(Mb_50_18)
+) %>% 
+  mutate(
+    cell_id = paste0(
+      sample,
+      "_", 
+      sprintf("%02d", cell) # keep the cell id digits in 2 digits!
+      )
+    ) %>% 
+  # remove the cell column
+  select(-cell) %>% 
+  # reorder the columns
+  relocate(sample, cell_id)
+```
+
+
+# Clear memory
+
+```{r}
+rm(
+  Thy_00_07,
+  Thy_10_08,
+  Thy_20_09,
+  Thy_30_10,
+  Thy_40_11,
+  Thy_50_12,
+  Mb_00_13,
+  Mb_10_14,
+  Mb_20_23,
+  Mb_30_27,
+  Mb_40_y,
+  Mb_50_18
+  )
+```
+
+
+# Export
+
+```{r}
+saveRDS(peak_data_xy, file = "cache/peak_data_xy.RDS")
+saveRDS(area_data, file = "cache/area_data.RDS")
+saveRDS(fit_data, file = "cache/fit_data.RDS")
+```
+
+
 
