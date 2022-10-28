@@ -31,6 +31,9 @@ cd_pc_summarized <- readRDS("cache/cd_pc_data_summarized.RDS")
 
 # Import the excluded cells list
 excluded_cells <- readxl::read_excel("data/other/excluded_cells.xlsx") %>% pull(cell_id)
+
+# Import the CD% data that results from our fitting in LabSpec6
+cd_pc_summarized_fitted <- readRDS("cache/area_data.RDS")
 ```
 
 ## Join the data!
@@ -44,9 +47,18 @@ co_registered <- roi_data_joined %>%
   filter(!cell_id %in% excluded_cells) %>% 
   # Exclude samples on the excluded samples list
   filter(!sample %in% c("Mb_20_23"))
+
+co_registered_fitted <- roi_data_joined %>% 
+  left_join(cd_pc_summarized_fitted,
+            by = "cell_id") %>% 
+  # Exclude cells on the excluded cells list
+  filter(!cell_id %in% excluded_cells) %>% 
+  # Exclude samples on the excluded samples list
+  filter(!sample %in% c("Mb_20_23"))
 ```
 
 ```{r}
 saveRDS(co_registered, "cache/co_registered.RDS")
+saveRDS(co_registered_fitted, "cache/co_registered_fitted.RDS")
 ```
 
