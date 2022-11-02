@@ -14,339 +14,272 @@ editor_options:
 ```{r}
 library(tidyverse)
 library(magrittr)
+library(tidyverse)
+library(cowplot)
+library(latex2exp)
+library(ggside)
+library(ggsci)
+library(ggdist)
 ```
 
 ## Load from cache
 
 ```{r}
-co_registered <- readRDS("cache/co_registered.RDS")
+# Only loading the co-registered dataset using the fitted data
+
+# Co registered datasets
+co_registered_fit <- readRDS("cache/co_registered_fitted.RDS")
+
+# Area data
+cd_pc_data_fitted <- readRDS("cache/area_data.RDS")
+
+# Fitted xy data
+fit_data <- readRDS("cache/fit_data.RDS")
+
+# Fitting parameter data
+fitted_xy_data <- readRDS("cache/peak_data_xy.RDS")
 ```
 
-# Analysis
-
-## Separate
-Let's break this dataset into two distinct datasets for Methanogens and SRB:
+## Load from source
 
 ```{r}
-srb <- co_registered %>% filter(organism.x == "T. hydrogeniphilus")
-mb <- co_registered %>% filter(organism.x == "M. NSHQ14")
+calculate_growth <- source("source/Calculate_Growth.R")
 ```
 
-## Tidy up the dataset
 
+# Proxy generation
 ```{r}
-srb %<>% select(cell_id, Ratio_2Hx1H, cd_frac, cd_pc) 
-mb %<>% select(cell_id, Ratio_2Hx1H, cd_frac, cd_pc) 
+proxy_data <- broom::tidy(lm(data = co_registered_fit, `CD%`  ~ at2H_percent_dtc))
+proxy_y_int <- proxy_data %>% 
+  filter(term == "(Intercept)") %>%
+  select(estimate) %>% 
+  pull()
+
+proxy_slope <- proxy_data %>% 
+  filter(term == "at2H_percent_dtc") %>% 
+  select(estimate) %>% 
+  pull()
 ```
 
-## Test fits
-
-Let's test some fits including linear, poly, and b-splines
-
+# Proxy generation - SRB
 ```{r}
-srb_1 <- lm(cd_pc ~ Ratio_2Hx1H, data = srb) # linear model
-srb_2 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 2), data = srb) # poly 2
-srb_3 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 3), data = srb) # poly 3
-srb_4 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 4), data = srb) # poly 4
-srb_5 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 5), data = srb) # poly 5
-srb_6 <- lm(cd_pc ~ splines::bs(Ratio_2Hx1H, 3), data = srb) # 3-b-spline
+proxy_data_SRB <- broom::tidy(lm(
+  data = co_registered_fit %>% filter(organism == "T. hydrogeniphilus"), 
+  `CD%`  ~ at2H_percent_dtc))
+proxy_y_int_SRB <- proxy_data_SRB %>% 
+  filter(term == "(Intercept)") %>%
+  select(estimate) %>% 
+  pull()
 
-
-mb_1 <- lm(cd_pc ~ Ratio_2Hx1H, data = mb) # linear model
-mb_2 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 2), data = mb) # poly 2
-mb_3 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 3), data = mb) # poly 3
-mb_4 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 4), data = mb) # poly 4
-mb_5 <- lm(cd_pc ~ poly(Ratio_2Hx1H, 5), data = mb) # poly 5
-mb_6 <- lm(cd_pc ~ splines::bs(Ratio_2Hx1H, 3), data = mb) # 3-b-spline
+proxy_slope_SRB <- proxy_data_SRB %>% 
+  filter(term == "at2H_percent_dtc") %>% 
+  select(estimate) %>% 
+  pull()
 ```
 
-And we can look at the summary statistics: calculated adjusted R-squared of each model
-
+# Proxy generation - Mb
 ```{r}
-srb_1_r2 <- summary(srb_1)$adj.r.squared
-srb_2_r2 <- summary(srb_2)$adj.r.squared
-srb_3_r2 <- summary(srb_3)$adj.r.squared
-srb_4_r2 <- summary(srb_4)$adj.r.squared
-srb_5_r2 <- summary(srb_5)$adj.r.squared
-srb_6_r2 <- summary(srb_6)$adj.r.squared
+proxy_data_Mb <- broom::tidy(lm(
+  data = co_registered_fit %>% filter(organism == "M. NSHQ14"), 
+  `CD%`  ~ at2H_percent_dtc))
+proxy_y_int_Mb <- proxy_data_Mb %>% 
+  filter(term == "(Intercept)") %>%
+  select(estimate) %>% 
+  pull()
 
-mb_1_r2 <- summary(mb_1)$adj.r.squared
-mb_2_r2 <- summary(mb_2)$adj.r.squared
-mb_3_r2 <- summary(mb_3)$adj.r.squared
-mb_4_r2 <- summary(mb_4)$adj.r.squared
-mb_5_r2 <- summary(mb_5)$adj.r.squared
-mb_6_r2 <- summary(mb_6)$adj.r.squared
-
-srb_1_r2
-srb_2_r2
-srb_3_r2
-srb_4_r2
-srb_5_r2
-srb_6_r2
-mb_1_r2 
-mb_2_r2 
-mb_3_r2 
-mb_4_r2 
-mb_5_r2 
-mb_6_r2 
+proxy_slope_Mb <- proxy_data_Mb %>% 
+  filter(term == "at2H_percent_dtc") %>% 
+  select(estimate) %>% 
+  pull()
 ```
 
-## Visualize the curve fits
-
-With base R:
+## Quickplot the proxy fit
 
 ```{r}
-plot(srb$Ratio_2Hx1H, srb$cd_pc, xlab = "2F", ylab = "CD%")
-x_axis <- seq(0, 0.20, length = 20)
-lines(x_axis, predict(srb_1, data.frame(Ratio_2Hx1H = x_axis)), col = "green")
-lines(x_axis, predict(srb_2, data.frame(Ratio_2Hx1H = x_axis)), col = "red")
-lines(x_axis, predict(srb_3, data.frame(Ratio_2Hx1H = x_axis)), col = "purple")
-lines(x_axis, predict(srb_4, data.frame(Ratio_2Hx1H = x_axis)), col = "blue")
-lines(x_axis, predict(srb_5, data.frame(Ratio_2Hx1H = x_axis)), col = "orange")
-lines(x_axis, predict(srb_1, data.frame(Ratio_2Hx1H = x_axis)), col = "pink")
-```
-
-Or with ggplot:
-
-```{r}
-srb %>% ggplot(
-  aes(
-    x = Ratio_2Hx1H,
-    y = cd_pc
-  )
-) +
-  geom_point(
-    shape = 21,
-    color = "black"
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~x,
-    color = "#a32121",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 2),
-    color = "#a37821",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 3),
-    color = "#b4d61c",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 4),
-    color = "#41d61c",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 5),
-    color = "#1cd3d6",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y ~ splines::bs(x, 3),
-    color = "#1c1fd6",
-    size = 0.75,
-    se = FALSE
-  ) +
-  theme_bw()
-```
-
-Great thing about ggplot: we can replicate it with the Mb dataset immediately:
-
-```{r}
-mb %>% ggplot(
-  aes(
-    x = Ratio_2Hx1H,
-    y = cd_pc
-  )
-) +
-  geom_point(
-    shape = 21,
-    color = "black"
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~x,
-    color = "#a32121",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 2),
-    color = "#a37821",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 3),
-    color = "#b4d61c",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 4),
-    color = "#41d61c",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 5),
-    color = "#1cd3d6",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y ~ splines::bs(x, 3),
-    color = "#1c1fd6",
-    size = 0.75,
-    se = FALSE
-  ) +
-  theme_bw()
-```
-
-Or even with the whole dataset:
-
-```{r}
-co_registered %>% ggplot(
-  aes(
-    x = Ratio_2Hx1H,
-    y = cd_pc
-  )
-) +
-  geom_point(
-    shape = 21,
-    color = "black"
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~x,
-    color = "#a32121",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 2),
-    color = "#a37821",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 3),
-    color = "#b4d61c",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 4),
-    color = "#41d61c",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 5),
-    color = "#1cd3d6",
-    size = 0.75,
-    se = FALSE
-  ) +
-  stat_smooth(
-    method = "lm",
-    formula = y ~ splines::bs(x, 3),
-    color = "#1c1fd6",
-    size = 0.75,
-    se = FALSE
-  ) +
-  theme_bw()
-```
-
-The R^2 don't tell us too much, but the lines can be very informative. There are decisions to be made regarding which data is "priority" to fit. For example, what happens if we remove the 0% sample?
-
-```{r}
-co_registered_no_zero <- co_registered %>% 
-  filter(f_l != 0) %>% 
-  select(cell_id, Ratio_2Hx1H, cd_frac, cd_pc)
-
-co_registered_no_zero %>% 
+co_registered_fit %>% 
   ggplot(
-  aes(
-    x = Ratio_2Hx1H,
-    y = cd_pc
-  )
-) +
-  geom_point(
-    shape = 21,
-    color = "black"
+    aes(
+      x = at2H_percent_dtc,
+      y = `CD%`
+    )
   ) +
-  stat_smooth(
+  geom_point() +
+  geom_smooth(
     method = "lm",
-    formula = y~x,
-    color = "#a32121",
-    size = 0.75,
-    se = FALSE
+    formula = "y ~ x",
+    se = FALSE,
+    level = 0.99, # 99% confidence interval
+    color = "red"
   ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~poly(x, 2),
-    color = "#a37821",
-    size = 0.75,
-    se = FALSE
+  geom_abline(slope = 1, linetype = "dashed") +
+  coord_cartesian(xlim = c(0,25), ylim =  c(0,45)) +
+  labs(
+    title = paste0("y = ", round(proxy_slope, 4), "x + ", round(proxy_y_int, 4))
   ) +
-  # stat_smooth(
-  #   method = "lm",
-  #   formula = y~poly(x, 3),
-  #   color = "#b4d61c",
-  #   size = 0.75,
-  #   se = FALSE
-  # ) +
-  # stat_smooth(
-  #   method = "lm",
-  #   formula = y~poly(x, 4),
-  #   color = "#41d61c",
-  #   size = 0.75,
-  #   se = FALSE
-  # ) +
-  # stat_smooth(
-  #   method = "lm",
-  #   formula = y~poly(x, 5),
-  #   color = "#1cd3d6",
-  #   size = 0.75,
-  #   se = FALSE
-  # ) +
-  # stat_smooth(
-  #   method = "lm",
-  #   formula = y ~ splines::bs(x, 3),
-  #   color = "#1c1fd6",
-  #   size = 0.75,
-  #   se = FALSE
-  # ) +
-  stat_smooth(
-    method = "lm",
-    formula = y~log(x),
-    color = "red",
-    size = 0.75,
-    se = FALSE
-  ) +
-  theme_bw()
+  theme_classic()
 ```
+
+# Generate test dataset
+
+```{r}
+test_data <- tibble(
+  experiment = "A",
+  a = 1, # assimilation efficiency assumed to be 1
+  f_l = 30, # label strenght is 30 atom % D2O
+  t = 60, # incubation time is 60 days
+  f_0 = 0.0000000001, # f0, biomass at t0, assumed to be natural abundance of the deuterium isotope
+  f_t = abs(rnorm(
+    n = 5000, # number of cells measured
+    mean = 10,
+    sd = 4
+    ))
+) %>% 
+  mutate(
+    f_t = case_when(
+      f_t > 30 ~ 30,
+      TRUE ~ f_t
+    )
+  ) %>% 
+  mutate(
+    u_d = calculate_turnover(
+      a = a,
+      FL = f_l,
+      t = t,
+      F0 = f_0,
+      FT = f_t
+    )
+  )
+```
+
+### Inspect the f_t distribution
+
+```{r}
+# Inspect the distribution
+test_data %>% 
+  ggplot(
+    aes(
+      x = f_t
+    )
+  ) +
+  geom_histogram(bins = 100) +
+  theme_classic()
+```
+
+### Inspect the turnover rates
+
+```{r}
+# Inspect the µ
+test_data %>% 
+  ggplot(
+    aes(
+      x = u_d
+    )
+  ) +
+  geom_histogram(bins = 100) +
+  labs(
+    x = latex2exp::TeX("Turnover rate ($d^{-1}$)")
+  ) +
+  theme_classic()
+```
+
+### Apply the proxy to the turnover rates
+
+```{r}
+test_data_proxied <- test_data %>% 
+  mutate(
+    f_t_raman = f_t * proxy_slope,
+    f_t_nanoSIMS = f_t / proxy_slope,
+    u_d_raman = calculate_turnover(
+      a = a,
+      FL = f_l,
+      t = t,
+      F0 = f_0,
+      FT = f_t_raman
+      ),
+    u_d_nanoSIMS = calculate_turnover(
+      a = a,
+      FL = f_l,
+      t = t,
+      F0 = f_0,
+      FT = f_t_nanoSIMS
+      )
+    )
+```
+
+### Inspect the distribution of f_t
+
+```{r}
+test_data_proxied %>% 
+  pivot_longer(
+    cols = c(f_t, f_t_raman, f_t_nanoSIMS),
+    values_to = "f_t",
+    names_to = "type"
+    ) %>% 
+  ggplot(
+    aes(
+      x = f_t,
+      fill = type
+    )
+  ) +
+  stat_halfeye(
+    alpha = 0.5
+  )
+```
+
+### Inspect the distribution of µ
+
+```{r}
+test_data_proxied %>% 
+  pivot_longer(
+    cols = c(u_d, u_d_nanoSIMS),
+    values_to = "u_d",
+    names_to = "type"
+    ) %>% 
+  ggplot(
+    aes(
+      x = u_d,
+      fill = type
+    )
+  ) +
+  stat_halfeye(
+    alpha = 0.5
+  )
+```
+
+```{r}
+test_data_proxied %>% 
+  ggplot(
+    aes(
+      x = f_t,
+      y = f_t_raman
+    )
+  ) +
+  geom_point()
+```
+
+```{r}
+test_data_proxied %>%
+  pivot_longer(cols = c(f_t, f_t_raman),
+               names_to = "type",
+               values_to = "2F") %>% 
+  pivot_longer(
+    cols = c(f_0, `2F`),
+    names_to = "timepoint",
+    values_to = "FT"
+  ) %>% 
+  mutate(
+    dt = case_when(
+      timepoint == "f_0" ~ 0,
+      timepoint == "2F" ~ 60
+    )
+  ) %>%
+  ggplot(
+    aes(x = dt,
+        y = FT,
+        color = type)
+  ) +
+  geom_point() +
+  geom_line(alpha = 0.5)
+```
+
 
