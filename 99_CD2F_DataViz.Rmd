@@ -1,0 +1,702 @@
+---
+title: "03_CD2F_DataViz"
+author: "Tristan Caro"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+# Setup
+
+## Clear the environment
+
+```{r}
+rm(list=ls())
+```
+
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+library(cowplot)
+library(latex2exp)
+library(ggside)
+library(ggsci)
+library(ggdist)
+```
+
+## Load from cache
+
+```{r}
+# Co registered datasets
+co_registered <- readRDS("cache/co_registered.RDS")
+co_registered_fit <- readRDS("cache/co_registered_fitted.RDS")
+
+# Area data
+cd_pc_data <- readRDS("cache/cd_pc_data.RDS")
+cd_pc_data_fitted <- readRDS("cache/area_data.RDS")
+
+# Fitted xy data
+fit_data <- readRDS("cache/fit_data.RDS")
+
+# Fitting parameter data
+fitted_xy_data <- readRDS("cache/peak_data_xy.RDS")
+```
+
+## Colors
+```{r}
+organism_colors <- c("#008c54", "#ffaa00")
+```
+
+
+
+
+
+# Plot
+
+## Co-registered
+
+```{r co-registered_faceted}
+p_co_registered <- co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  # Plot it!
+  ggplot(
+    aes(x = at2H_percent_dtc,
+        y = cd_pc_corr,
+        color = as.factor(f_l),
+        group = organism.x,
+        label = cell_id
+    )
+  ) +
+  geom_point(
+    alpha = 0.5,
+    size = 2
+  ) +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  stat_smooth(
+    formula = y ~ x,
+    #formula = y ~ splines::bs(x, 3),
+    size = 0.5,
+    method = 'lm',
+    se = FALSE,
+    color = "red"
+  ) +
+  facet_wrap(vars(organism.x)) +
+  coord_cartesian(
+    xlim = c(0,50), 
+    ylim = c(0,50)
+  ) +
+  scale_color_viridis_d(
+    end = 0.9,
+    option = "magma"
+    ) +
+  theme_bw() +
+  labs(
+    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$")
+  ) +
+  theme(
+    legend.position = "bottom",
+    ggside.panel.scale = 2
+  )
+p_co_registered
+```
+
+```{r}
+p_co_registered_fitted <- co_registered_fit %>% 
+  filter(!is.na(f_l)) %>% 
+  # Plot it!
+  ggplot(
+    aes(x = at2H_percent_dtc,
+        y = `CD%`,
+        color = as.factor(f_l),
+        #group = organism,
+        label = cell_id
+    )
+  ) +
+  geom_point(
+    alpha = 0.5,
+    size = 2
+  ) +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  stat_smooth(
+    formula = y ~ x,
+    #formula = y ~ splines::bs(x, 3),
+    size = 0.5,
+    method = 'lm',
+    se = TRUE,
+    level = 0.99, # 99% confidence interval
+    color = "red",
+    fill = "gray"
+    
+  ) +
+  #facet_wrap(vars(organism)) +
+  coord_cartesian(
+    xlim = c(0,25), 
+    ylim = c(0,45)
+  ) +
+  scale_color_viridis_d(
+    end = 0.9,
+    option = "magma"
+    ) +
+  theme_bw() +
+  labs(
+    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$")
+  ) +
+  theme(
+    legend.position = "bottom",
+    ggside.panel.scale = 2
+  )
+p_co_registered_fitted
+```
+
+
+```{r linear model}
+co_reg_fit <- broom::tidy(lm(data = co_registered, cd_pc_corr  ~ at2H_percent_dtc))
+
+print_lm_summary <- function(df) {
+  paste0("y = ", round(df$estimate[2], 2), "x + ", round(df$estimate[1], 2))
+}
+
+print_lm_summary(co_reg_fit)
+
+co_reg_fit_thy <- broom::tidy(
+  lm(data = co_registered %>%
+       filter(
+         organism.x == "T. hydrogeniphilus"
+        ), 
+     cd_pc_corr  ~ at2H_percent_dtc)
+  )
+
+co_reg_fit_mb <- broom::tidy(
+  lm(data = co_registered %>%
+       filter(
+         organism.x == "M. NSHQ14"
+        ), 
+     cd_pc_corr  ~ at2H_percent_dtc)
+  )
+
+print_lm_summary(co_reg_fit_thy)
+print_lm_summary(co_reg_fit_mb)
+```
+
+
+```{r co-registered-combined}
+p_co_registered2 <- co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  # Plot it!
+  ggplot(
+    aes(x = at2H_percent_dtc,
+        y = cd_pc_corr,
+        label = cell_id,
+    )
+  ) +
+  geom_point(
+    aes(
+      color = as.factor(f_l),
+      #shape = organism.x
+      ),
+    alpha = 9,
+    size = 3
+  ) +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  stat_smooth(
+    formula = y ~ x,
+    #formula = y ~ splines::bs(x, 3),
+    size = 0.5,
+    method = 'lm',
+    se = TRUE,
+    color = "red"
+  ) +
+  coord_cartesian(
+    xlim = c(0,40), 
+    ylim = c(0,40)
+  ) +
+  scale_color_viridis_d(
+    end = 0.9,
+    option = "magma"
+    ) +
+  theme_bw() +
+  labs(
+    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = "Label Strength (% D2O)"
+  ) +
+  theme(
+    legend.position = c(0.8, 0.25),
+    legend.background = element_rect(color = "black"),
+    legend.title = element_text(size = 10)
+  )
+p_co_registered2
+```
+
+
+```{r}
+p_co_registered_fitted2 <- co_registered_fit %>% 
+  filter(!is.na(f_l)) %>% 
+  # Plot it!
+  ggplot(
+    aes(x = at2H_percent_dtc,
+        y = `CD%`,
+        color = as.factor(f_l),
+        #group = organism,
+        label = cell_id
+    )
+  ) +
+  geom_point(
+    alpha = 0.5,
+    size = 2
+  ) +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  stat_smooth(
+    formula = y ~ x,
+    #formula = y ~ splines::bs(x, 3),
+    size = 0.5,
+    method = 'lm',
+    se = FALSE,
+    color = "red"
+  ) +
+  #facet_wrap(vars(organism)) +
+  coord_cartesian(
+    xlim = c(0,50), 
+    ylim = c(0,50)
+  ) +
+  scale_color_viridis_d(
+    end = 0.9,
+    option = "magma"
+    ) +
+  theme_bw() +
+  labs(
+    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$")
+  ) +
+  theme(
+    legend.position = "bottom",
+    ggside.panel.scale = 2
+  )
+p_co_registered_fitted2
+```
+
+
+## CD FL
+
+```{r}
+p_cd_fl <- co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(x = f_l,
+        y = cd_pc_corr,
+        color = organism.x
+        )
+  ) +
+  labs(
+    x = latex2exp::TeX("$^2F$ Growth Water"),
+    y = latex2exp::TeX("$^2F_{Raman}$")
+  ) +
+  facet_wrap(
+    vars(organism.x), 
+    scales = "free") +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  geom_point(
+    alpha = 0.5,
+    position = position_jitter(width = 2)
+  ) +
+  ggdist::stat_pointinterval(
+    position = position_nudge(x = 0.2),
+    color = "black"
+  ) +
+  scale_color_manual(values = organism_colors) + 
+  scale_x_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+    ) +
+  scale_y_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA",
+    strip.background = element_blank()
+  )
+p_cd_fl
+```
+
+## 2F FL
+
+```{r}
+p_2f_fl <- co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(x = f_l,
+        y = at2H_percent,
+        color = organism.x
+        )
+  ) +
+  facet_wrap(vars(organism.x), scales = "free") +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  geom_point(
+    alpha = 0.5,
+    position = position_jitter(width = 2)
+  ) +
+  scale_color_manual(values = organism_colors) + 
+  scale_x_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+    ) +
+  scale_y_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+  ) +
+  labs(
+    x = latex2exp::TeX("$^2F$ Growth Water"),
+    y = latex2exp::TeX("$^2F_{nanoSIMS}$")
+  ) +
+  ggdist::stat_pointinterval(
+    position = position_nudge(x = 0.2),
+    color = "black"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA",
+    strip.background = element_blank()
+  )
+p_2f_fl
+```
+
+## Cowplot: CD-FL and 2F-FL
+
+```{r}
+cowplot::plot_grid(
+  p_cd_fl,
+  p_2f_fl,
+  ncol = 1
+)
+```
+
+## 2R FL
+
+```{r}
+co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(x = as.factor(f_l),
+        y = `Ratio_2Hx1H`,
+        color = organism.x
+        )
+  ) +
+  facet_wrap(vars(organism.x)) +
+  geom_point(
+    alpha = 0.25
+  ) +
+  scale_color_manual(values = organism_colors) + 
+  labs(
+    x = latex2exp::TeX("$^2F$ Growth Water"),
+    y = latex2exp::TeX("$^2R_{nanoSIMS}$")
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA",
+    strip.background = element_blank()
+  )
+  
+```
+
+
+## Raman spectrum
+
+```{r}
+cd_pc_data %>% filter(cell_id == "Mb_50_18_38") %>% 
+  ggplot(aes(
+    x = wavenumber_cm,
+    y = intensity
+  )) +
+  geom_line() +
+  theme_minimal()
+```
+
+
+## Compare fitted co-reg with raw data
+
+### Compare the co-registered datasets
+
+```{r}
+co_reg_compare <- bind_rows(
+  co_registered %>% select(at2H_percent_dtc, cd_pc, f_l, organism.x) %>% mutate(type = "raw", organism = organism.x),
+  co_registered_fit %>% select(at2H_percent_dtc, `CD%`, f_l, organism) %>% mutate(type = "fitted")
+) %>%
+  mutate(cd_percent = case_when(
+    is.na(cd_pc) ~ `CD%`,
+    is.na(`CD%`) ~ cd_pc
+  )) %>% 
+  select(-c(cd_pc, `CD%`, organism.x))
+```
+
+```{r}
+co_reg_compare %>% 
+  ggplot(
+    aes(
+      x = at2H_percent_dtc,
+      y = cd_percent,
+      color = type
+    )
+  ) +
+  geom_point(
+    alpha = 0.5
+  ) +
+  geom_smooth(
+    method = "lm",
+    formula = "y ~ x"
+  ) +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  facet_wrap(vars(type)) +
+  coord_cartesian(
+    xlim = c(0,50), 
+    ylim = c(0,50)
+  ) +
+  scale_color_viridis_d(
+    end = 0.7,
+    begin = 0.3,
+    option = "magma"
+    ) +
+  theme_bw() +
+  labs(
+    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$")
+  ) +
+  theme(
+    legend.position = "bottom"
+  )
+```
+
+### CD_FL jitter plot
+
+```{r}
+p_cd_fl1 <- co_registered %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(x = f_l,
+        y = cd_pc_corr,
+        color = organism.x
+        )
+  ) +
+  labs(
+    x = latex2exp::TeX("$^2F$ Growth Water"),
+    y = latex2exp::TeX("$^2F_{Raman}$"),
+    title = "Raw Data"
+  ) +
+  facet_wrap(
+    vars(organism.x), 
+    scales = "free") +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  geom_point(
+    alpha = 0.5,
+    position = position_jitter(width = 2)
+  ) +
+  ggdist::stat_pointinterval(
+    position = position_nudge(x = 0.2),
+    color = "black"
+  ) +
+  scale_color_manual(values = organism_colors) + 
+  scale_x_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+    ) +
+  scale_y_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA",
+    strip.background = element_blank()
+  )
+
+p_cd_fl2 <- co_registered_fit %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(x = f_l,
+        y = `CD%`,
+        color = organism
+        )
+  ) +
+  labs(
+    x = latex2exp::TeX("$^2F$ Growth Water"),
+    y = latex2exp::TeX("$^2F_{Raman}$"),
+    title = "Fitted Data"
+  ) +
+  facet_wrap(
+    vars(organism), 
+    scales = "free") +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  geom_point(
+    alpha = 0.5,
+    position = position_jitter(width = 2),
+  ) +
+  ggdist::stat_pointinterval(
+    position = position_nudge(x = 0.2),
+    color = "black"
+  ) +
+  scale_color_manual(values = organism_colors) + 
+  scale_x_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+    ) +
+  scale_y_continuous(
+    limits = c(0, 55),
+    breaks = c(0, 10, 20, 30, 40, 50)
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "NA",
+    strip.background = element_blank()
+  )
+
+co_reg_compared <- cowplot::plot_grid(
+  p_cd_fl1,
+  p_cd_fl2,
+  ncol = 1
+)
+co_reg_compared
+
+save_plot(
+  filename = "fig_output/co_reg_compare.pdf",
+  plot = co_reg_compared,
+  base_height = 8,
+  base_width = 8
+  )
+
+
+```
+
+### CD_FL boxplot comparison
+
+```{r}
+co_reg_compare %>% 
+  filter(!is.na(f_l)) %>% 
+  ggplot(
+    aes(
+      x = as.factor(f_l),
+      y = cd_percent,
+      color = type
+    )
+  ) +
+  ggdist::stat_dist_pointinterval(position = position_dodgejust(width = 0.5)) +
+  scale_color_manual(values = c("black", "red")) +
+  labs(
+    x = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$"),
+    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = "Data Source"
+  ) +
+  theme_classic()
+```
+
+
+# Fitting parameter data
+```{r}
+p_fit_thy <- fit_data %>% 
+  mutate(organism =
+    case_when(
+      str_detect(sample, "Thy") ~ "T. hydrogeniphilus",
+      str_detect(sample, "Mb") ~ "M. NSHQ14"
+      )
+  ) %>% 
+  pivot_longer(
+    cols = -c(fit, sample, organism),
+    names_to = "fit_param",
+    values_to = "value"
+  ) %>%
+  filter(organism == "T. hydrogeniphilus") %>% 
+  ggplot(
+    aes(x = value,
+        fill = organism)
+  ) +
+  geom_histogram(
+    bins = 100,
+    alpha = 0.5,
+    fill = "orange"
+    ) +
+  facet_wrap(vars(fit_param, fit), scales = "free") +
+  theme_bw()
+
+p_fit_mb <- fit_data %>% 
+  mutate(organism =
+    case_when(
+      str_detect(sample, "Thy") ~ "T. hydrogeniphilus",
+      str_detect(sample, "Mb") ~ "M. NSHQ14"
+      )
+  ) %>% 
+  pivot_longer(
+    cols = -c(fit, sample, organism),
+    names_to = "fit_param",
+    values_to = "value"
+  ) %>%
+  filter(organism == "M. NSHQ14") %>% 
+  ggplot(
+    aes(x = value,
+        fill = organism)
+  ) +
+  geom_histogram(
+    bins = 100,
+    alpha = 0.5,
+    fill = "green"
+    ) +
+  facet_wrap(vars(fit_param,fit ), scales = "free") +
+  theme_bw()
+
+cowplot::plot_grid(p_fit_thy, p_fit_mb)
+```
+
