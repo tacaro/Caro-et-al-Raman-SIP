@@ -283,3 +283,23 @@ test_data_proxied %>%
 ```
 
 
+# CD-FL and 2F-FL comparison
+
+```{r}
+cdfl_model <- broom::tidy(
+  lm(
+    data = co_registered_fit %>% 
+      filter(f_l < 40), 
+    `CD%`  ~ f_l
+    )
+  )
+
+f2fl_model <- broom::tidy(
+  lm(
+    data = co_registered_fit %>% 
+      filter(f_l < 40),
+    at2H_percent_dtc ~ f_l
+  )
+)
+```
+
