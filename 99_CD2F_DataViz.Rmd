@@ -1,5 +1,5 @@
 ---
-title: "03_CD2F_DataViz"
+title: "99_CD2F_DataViz"
 author: "Tristan Caro"
 date: "`r Sys.Date()`"
 output: html_document
@@ -307,13 +307,14 @@ p_co_registered_fitted2
 
 ## CD FL
 
+
 ```{r}
-p_cd_fl <- co_registered %>% 
+p_cd_fl <- co_registered_fit %>% 
   filter(!is.na(f_l)) %>% 
   ggplot(
     aes(x = f_l,
-        y = cd_pc_corr,
-        color = organism.x
+        y = `CD%`,
+        color = organism
         )
   ) +
   labs(
@@ -321,7 +322,7 @@ p_cd_fl <- co_registered %>%
     y = latex2exp::TeX("$^2F_{Raman}$")
   ) +
   facet_wrap(
-    vars(organism.x), 
+    vars(organism), 
     scales = "free") +
   geom_abline(
     slope = 1,
