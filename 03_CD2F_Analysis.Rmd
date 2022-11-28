@@ -303,3 +303,225 @@ f2fl_model <- broom::tidy(
 )
 ```
 
+# Error analysis
+
+```{r}
+co_registered_fit_w_se <- co_registered_fit %>% 
+  group_by(f_l) %>% 
+  summarize(
+    mn_cd = mean(`CD%`, na.rm = TRUE),
+    mn_2f = mean(at2H_percent_dtc, na.rm = TRUE),
+    se_cd = sd(`CD%`, na.rm = TRUE),
+    se_2f = sd(at2H_percent_dtc, na.rm = TRUE)
+  )
+co_registered_fit_w_se
+
+p_co_registered_fit_w_se <- co_registered_fit_w_se %>% 
+  ggplot(
+    aes(
+      x = mn_2f,
+      y = mn_cd,
+      color = as.factor(f_l),
+      shape = organism
+    )
+  ) +
+  geom_point(
+    size = 3,
+  ) +
+  geom_linerange(
+    aes(
+      ymin = mn_cd - (0.5* se_cd),
+      ymax = mn_cd + (0.5* se_cd)
+    ),
+    linewidth = 1
+  ) +
+  geom_linerange(
+    aes(
+      xmin = mn_2f - (0.5 * se_2f),
+      xmax = mn_2f + (0.5 * se_2f)
+    ),
+    linewidth = 1
+  ) +
+  scale_color_viridis_d(
+    option = "magma",
+    begin = 0.2,
+    end = 0.9
+  ) +
+  labs(
+    x = "Mean 2F (NanoSIMS)",
+    y = "Mean CD% (Raman)",
+    color = "Label Strength (%)"
+  ) +
+  theme_classic()
+
+p_co_registered_fit_w_se_inset <- co_registered_fit_w_se %>% 
+  ggplot(
+    aes(
+      x = mn_2f,
+      y = mn_cd,
+      color = as.factor(f_l)
+    )
+  ) +
+  geom_point(
+    size = 3,
+    shape = 1
+  ) +
+  geom_linerange(
+    aes(
+      ymin = mn_cd - (0.5* se_cd),
+      ymax = mn_cd + (0.5* se_cd)
+    ),
+    linewidth = 1
+  ) +
+  geom_linerange(
+    aes(
+      xmin = mn_2f - (0.5 * se_2f),
+      xmax = mn_2f + (0.5 * se_2f)
+    ),
+    linewidth = 1
+  ) +
+  scale_color_viridis_d(
+    option = "magma",
+    begin = 0.2,
+    end = 0.9
+  ) +
+  coord_cartesian(xlim = c(0,0.05), ylim = c(0, 5)) +
+  labs(
+    x = "",
+    y = "",
+    color = ""
+  ) +
+  theme_classic()
+p_co_registered_fit_w_se_inset
+```
+
+### Track Standard Error
+```{r}
+co_registered_fit_w_se %>% 
+  pivot_longer(
+    cols = c(se_cd, se_2f),
+    names_to = "Method",
+    values_to = "se"
+  ) %>% 
+  ggplot(
+    aes(
+      x = f_l,
+      y = se,
+      color = Method,
+      fill = Method,
+      linetype = organism
+    )
+  ) + geom_line()
+```
+
+
+### Identify Raman/nanoSIMS measurement error
+
+```{r}
+raman_standard_error <- co_registered_fit_w_se %>% 
+  filter(f_l == 0) %>% 
+  select(se_cd) %>% 
+  pull()
+
+nanoSIMS_standard_error <- co_registered_fit_w_se %>% 
+  filter(f_l == 0) %>% 
+  select(se_2f) %>% 
+  pull()
+```
+
+```{r}
+calculate_turnover(
+  a = 1,
+  FT = raman_standard_error,
+  F0 = 0,
+  FL = 30,
+  t = 7
+)
+
+# Multiply the raman standard error by 2 to assume that 2SD is required to be above BG noise
+error_u_d <- tibble(
+  a = 0.7,
+  error_raman = 2 * raman_standard_error,
+  error_nanoSIMS = 2* nanoSIMS_standard_error,
+  F0 = 0,
+  FL = seq(5,50, by = 1),
+  t = 7,
+  # Calculate detection limit in turnover (d^-1)
+  DLR_u_d = calculate_turnover(
+    a = a,
+    FT = error_raman,
+    FL = FL,
+    t = t,
+    F0 = F0
+  ),
+  DLN_u_d = calculate_turnover(
+    a = a,
+    FT = error_nanoSIMS,
+    FL = FL,
+    t = t,
+    F0 = F0
+  )
+) %>% 
+  pivot_longer(
+    cols = c(DLR_u_d, DLN_u_d),
+    values_to = "DL_u_d",
+    names_to = "Method"
+  )
+
+error_u_d %>% 
+  ggplot(
+    aes(
+      x = FL, 
+      y = DL_u_d, 
+      color = Method
+    )
+  ) +
+  geom_line()
+```
+
+```{r}
+error_u_d_var <- tibble(
+  FL = seq(1, 50, by = 1),
+  t = seq(1, 50, by = 1)
+  ) %>% 
+  expand(FL, t) %>% 
+  mutate(
+    a = 0.7,
+    F0 = 0.0000000000000001,
+    error_raman = (2 * raman_standard_error),
+    error_nanoSIMS = (2 * nanoSIMS_standard_error),
+    DLR_u_d = calculate_turnover(
+      a = a,
+      FT = error_raman,
+      FL = FL,
+      t = t,
+      F0 = F0
+    ),
+    DLN_u_d = calculate_turnover(
+      a = a,
+      FT = error_nanoSIMS,
+      FL = FL,
+      t = t,
+      F0 = F0
+    )
+) %>% 
+  pivot_longer(
+    cols = c(DLR_u_d, DLN_u_d),
+    values_to = "DL_u_d",
+    names_to = "Method"
+  )
+
+p_error_u_d_var <- error_u_d_var%>% 
+  ggplot(
+    aes(
+      x = FL, 
+      y = DL_u_d, 
+      color = t
+    )
+  ) +
+  geom_point() +
+  facet_wrap(vars(Method), scales = "free") +
+  scale_y_log10()
+plotly::ggplotly(p_error_u_d_var)
+```
+
