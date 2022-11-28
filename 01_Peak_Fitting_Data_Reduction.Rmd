@@ -59,9 +59,50 @@ select_fit_xy <- function(df) {
     ) %>% 
     mutate(sample = sample_id_str)
 }
+
+clean_area_data <- function(df) {
+    df %>% mutate(
+    cell_id = paste0(
+      sample,
+      "_", 
+      sprintf("%02d", cell) # keep the cell id digits in 2 digits!
+      ),
+    f_l = case_when(
+      sample == "Mb_40_y" ~ 40,
+      sample == "Mb_20_x" ~ 20,
+      TRUE ~ as.numeric(
+        str_sub(
+          cell_id, 
+          start = -8, 
+          end = -7)
+        )
+      )
+    ) %>% 
+  # remove the cell column
+  select(-cell) %>% 
+  # reorder the columns
+  relocate(sample, cell_id)
+}
+
+clean_fit_data <- function(df) {
+  df %>% 
+    mutate(
+    cell_id = paste0(
+      sample,
+      "_", 
+      sprintf("%02d", cell) # keep the cell id digits in 2 digits!
+      )
+    ) %>% 
+  # remove the cell column
+  select(-cell) %>% 
+  # reorder the columns
+  relocate(sample, cell_id)
+}
 ```
 
 # Read data
+
+## Read CD-2F dataset
 
 ```{r}
 # Define where our large xlsx file is
@@ -77,11 +118,31 @@ fitted_data <- lapply(sheets, openxlsx::read.xlsx, xlsxFile=path)
 names(fitted_data) <- sheets
 ```
 
+## Read time series test dataset
+
+```{r}
+# Define where our large xlsx file is
+path2 <- "data/Raman/fitted_data/CD_RamanFits_GrowthExpt_TESTDATA.xlsx"
+
+# use openxlsx to get the names of the sheets
+sheets2 <- openxlsx::getSheetNames(path2)
+
+# Read in all the data by lapply-ing the read.xlsx function across all the sheet names
+cd20_test_dataset <- lapply(sheets2, openxlsx::read.xlsx, xlsxFile=path2)
+
+# Assign names to the dataframe
+names(cd20_test_dataset) <- sheets2
+
+```
+
+
 # Reduce Data
 
 ## Pull excel sheets into their own dataframes
 
 I could probably do this more elegantly, but for now this will suffice.
+
+For the CD2F dataset:
 
 ```{r}
 Thy_00_07 <- fitted_data$`Thy_00_07!`
@@ -100,9 +161,21 @@ Mb_50_18 <- fitted_data$`Mb_50_18!`
 
 ```
 
+For the time-series CD20 dataset:
+
+```{r}
+Thy_20_T1_17h <- cd20_test_dataset$Thy_20_T1_17h
+Thy_20_T2_24h <- cd20_test_dataset$Thy_20_T2_24h
+Thy_20_T3_41h <- cd20_test_dataset$Thy_20_T3_41h
+Thy_20_T4_48h <- cd20_test_dataset$Thy_20_T4_48h
+```
+
+
 ## Separate the data
 
 Here we separate the fit parameters, peak area summaries, and fitted peak paths (xy data) into their own dataframes, identifying them by the sample name.
+
+For the CD2F dataset:
 ```{r}
 fit_data <- bind_rows(
   select_fit_params(Thy_00_07),
@@ -133,27 +206,7 @@ area_data <- bind_rows(
   select_fit_areas(Mb_40_y),
   select_fit_areas(Mb_50_18)
 ) %>% 
-  mutate(
-    cell_id = paste0(
-      sample,
-      "_", 
-      sprintf("%02d", cell) # keep the cell id digits in 2 digits!
-      ),
-    f_l = case_when(
-      sample == "Mb_40_y" ~ 40,
-      sample == "Mb_20_x" ~ 20,
-      TRUE ~ as.numeric(
-        str_sub(
-          cell_id, 
-          start = -8, 
-          end = -7)
-        )
-      )
-    ) %>% 
-  # remove the cell column
-  select(-cell) %>% 
-  # reorder the columns
-  relocate(sample, cell_id)
+  clean_area_data()
 
 
 
@@ -171,23 +224,48 @@ peak_data_xy <- bind_rows(
   select_fit_xy(Mb_40_y),
   select_fit_xy(Mb_50_18)
 ) %>% 
+  clean_fit_data()
+```
+
+
+For the CD20 test dataset:
+
+```{r}
+fit_data_cd20 <- bind_rows(
+  select_fit_params(Thy_20_T1_17h),
+  select_fit_params(Thy_20_T2_24h),
+  select_fit_params(Thy_20_T3_41h),
+  select_fit_params(Thy_20_T4_48h)
+)
+
+area_data_cd20 <- bind_rows(
+  select_fit_areas(Thy_20_T1_17h),
+  select_fit_areas(Thy_20_T2_24h),
+  select_fit_areas(Thy_20_T3_41h),
+  select_fit_areas(Thy_20_T4_48h)
+) %>% 
+  clean_area_data() %>%
+  # need to add in f_l manually and clean CH
   mutate(
-    cell_id = paste0(
-      sample,
-      "_", 
-      sprintf("%02d", cell) # keep the cell id digits in 2 digits!
-      )
-    ) %>% 
-  # remove the cell column
-  select(-cell) %>% 
-  # reorder the columns
-  relocate(sample, cell_id)
+    f_l = 20,
+    CH = as.numeric(CH)
+    )
+
+peak_data_xy_cd20 <- bind_rows(
+  select_fit_xy(Thy_20_T1_17h),
+  select_fit_xy(Thy_20_T2_24h),
+  select_fit_xy(Thy_20_T3_41h),
+  select_fit_xy(Thy_20_T4_48h)
+) %>% 
+  clean_fit_data()
+
 ```
 
 
 # Clear memory
 
 ```{r}
+# Clear individual dfs
 rm(
   Thy_00_07,
   Thy_10_08,
@@ -202,15 +280,34 @@ rm(
   Mb_40_y,
   Mb_50_18
   )
+
+rm(
+  Thy_20_T1_17h,
+  Thy_20_T2_24h,
+  Thy_20_T3_41h,
+  Thy_20_T4_48h
+  )
+
+# Clear the large lists
+rm(
+  fitted_data,
+  cd20_test_dataset
+  )
 ```
 
 
 # Export
 
 ```{r}
+# Export CD2F datasets
 saveRDS(peak_data_xy, file = "cache/peak_data_xy.RDS")
 saveRDS(area_data, file = "cache/area_data.RDS")
 saveRDS(fit_data, file = "cache/fit_data.RDS")
+
+# Export CD20 test datasets
+saveRDS(peak_data_xy_cd20, file = "cache/peak_data_xy_cd20.RDS")
+saveRDS(area_data_cd20, file = "cache/area_data_cd20.RDS")
+saveRDS(fit_data_cd20, file = "cache/fit_data_cd20.RDS")
 ```
 
 
