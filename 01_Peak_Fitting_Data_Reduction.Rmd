@@ -259,6 +259,16 @@ peak_data_xy_cd20 <- bind_rows(
 ) %>% 
   clean_fit_data()
 
+
+# Create abbreviated CD20 dataset
+
+area_data_cd20_tidy <- area_data_cd20 %>% 
+  select(
+    sample,
+    cell_id,
+    f_l,
+    `CD%`
+  )
 ```
 
 
@@ -308,6 +318,7 @@ saveRDS(fit_data, file = "cache/fit_data.RDS")
 saveRDS(peak_data_xy_cd20, file = "cache/peak_data_xy_cd20.RDS")
 saveRDS(area_data_cd20, file = "cache/area_data_cd20.RDS")
 saveRDS(fit_data_cd20, file = "cache/fit_data_cd20.RDS")
+saveRDS(area_data_cd20_tidy, file = "cache/test_dataset.RDS")
 ```
 
 
