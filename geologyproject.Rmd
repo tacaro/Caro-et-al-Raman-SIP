@@ -1,0 +1,207 @@
+---
+title: "geologyphd"
+author: "George Brown and Claudia Chen"
+date: '2022-11-16'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(tidyverse)
+library(glmnet)
+library(rstanarm)
+library(boot)
+
+correlated_dataset <- read_rds("C:/Users/chen1/Downloads/correlated_dataset.RDS")
+```
+
+```{r}
+head(correlated_dataset)
+```
+
+
+```{r}
+names(correlated_dataset)[5] <- "CD"
+head(correlated_dataset)
+```
+
+```{r}
+hist(correlated_dataset$CD)
+hist(correlated_dataset$at2H_percent_dtc)
+```
+
+
+```{r}
+#on all the data
+ggplot(correlated_dataset, aes(x = CD, y = at2H_percent_dtc)) +
+    geom_point() + 
+    geom_smooth(method = "lm")
+```
+
+Can see that variance increases as fractional abundance increases.
+
+```{r}
+set.seed(1)
+train = sample(c(TRUE,FALSE),nrow(correlated_dataset),rep=TRUE) #randomly choose
+test = (!train) #anything not in train
+
+train.geo <- correlated_dataset[train,]
+test.geo <- correlated_dataset[test,]
+
+nrow(train.geo)  
+nrow(test.geo)
+```
+
+
+```{r}
+#Simple linear model with all data included
+#We flip CD% and at2H% because we want to predict against the known quantity
+linear.fit <- lm(at2H_percent_dtc ~ CD, data = correlated_dataset)
+summary(linear.fit)
+```
+
+```{r}
+logarithmic.fit <- lm(at2H_percent_dtc ~ log(CD), data = correlated_dataset)
+summary(logarithmic.fit)
+```
+
+
+# Test Error for Various Models
+
+```{r}
+set.seed(1)
+
+#lm
+linear.fit.train = lm(at2H_percent_dtc~CD, data=train.geo)
+lm.pred.geo = predict(linear.fit.train, test.geo, type="response")
+mean((test.geo$at2H_percent_dtc - lm.pred.geo)^2) #mean squared error
+#MSE: residual squared (difference between actual and predicted)
+
+#logarithmic
+logarithmic.fit.train = lm(at2H_percent_dtc~log(CD), data=train.geo)
+logarithmic.pred.geo = predict(logarithmic.fit.train, test.geo, type="response")
+mean((test.geo$at2H_percent_dtc - lm.pred.geo)^2)
+
+#ridge
+train.matrix = model.matrix(at2H_percent_dtc~CD, data = train.geo) #for glmnet
+test.matrix = model.matrix(at2H_percent_dtc~CD, data = test.geo)
+
+cv.lam = cv.glmnet(train.matrix, train.geo$at2H_percent_dtc, alpha=0)
+lam = cv.lam$lambda.min
+
+ridge.fit = glmnet(train.matrix, train.geo$at2H_percent_dtc, alpha = 0)
+ridge.pred.geo = predict(ridge.fit, s=lam, newx = test.matrix)
+mean((train.geo$at2H_percent_dtc - ridge.pred.geo)^2)
+
+#lasso
+cv.lam2 = cv.glmnet(train.matrix, train.geo$at2H_percent_dtc, alpha=1)
+lam2 = cv.lam$lambda.min
+
+lasso.fit = glmnet(train.matrix, train.geo$at2H_percent_dtc, alpha = 1)
+lasso.pred.geo = predict(lasso.fit, s=lam2, newx = test.matrix)
+mean((train.geo$at2H_percent_dtc - lasso.pred.geo)^2)
+```
+
+Linear model has the best MSE out of all the model options- corroborates
+idea that we can predict fractional abundance using either method.
+Actually lower errors across the board using raman to predict nanoSIMS.
+
+Bootstrapping 
+Resampling method with replacement in order to get overall distribution from one sample 
+```{r}
+#Function to find coefficients
+coefficients <- function(formula, data, indices) {
+  d <- correlated_dataset[indices,] # allows boot to select sample
+  fit <- lm(at2H_percent_dtc~CD, data=d)
+  coef(fit) #coefficients 
+  #return(summary(fit)$r.square) #correlation
+}
+# Performing 1500 replications with boot 
+bootModel <- boot(data=correlated_dataset, statistic=coefficients, R=1500)
+
+#coefficients
+bootModel$t0
+
+m=bootModel$t0[2]
+b=bootModel$t0[1]
+
+my.function = function(x){
+  return(m*x+b)
+}
+
+bootPred = sapply(test.geo$CD, my.function)
+
+
+mean((test.geo$at2H_percent_dtc - bootPred)^2)
+
+
+```
+
+Bootstrapping with a linear model has an MSE error of 6.294893 which is the best model overall. 
+
+
+
+```{r}
+##Calculate various versions of error for the bootstrapping linear model 
+
+#MSE: residual squared (difference between actual and predicted)
+#more weight to larger errors than smaller ones
+mean((test.geo$at2H_percent_dtc - bootPred)^2) #mean squared error
+
+#RMSE: square root of MSE (more meaning for units)
+(mean((test.geo$at2H_percent_dtc - bootPred)^2))^(1/2)
+
+#MAE: sum of absolute errors divided by sample size
+#same weight for larger and smaller errors
+mean(abs(mean(test.geo$at2H_percent_dtc - bootPred)))
+
+```
+
+
+```{r}
+plot(linear.fit)
+```
+
+Leverage/Cook's distance indicate no influential points in our dataset skewing
+the data; normality assumption is met indicated Normal QQ plot; residuals vs
+fitted plot is at zero, per expectations.
+
+# Credible Intervals
+Sigma indicates standard error in this Bayesian approach.
+
+```{r}
+stan.fit <- stan_glm(at2H_percent_dtc ~ CD, data = correlated_dataset)
+summary(stan.fit)
+```
+
+```{r}
+posterior_interval(stan.fit, prob=0.95)
+posterior_interval(stan.fit, prob = 0.66)
+```
+
+```{r}
+plot(stan.fit)
+```
+
+# Predictive Power Visualization
+
+```{r}
+pp_check(stan.fit)
+#Note: Bayesians view parameters as being random variables in a distribution.
+#Actual CD values have peaks at 0 and less than 10. Model tends to predictt
+#both peaks as being greater than they actually are.
+```
+
+```{r}
+help("pp_check")
+```
+
+# Conclusion
+
+The data supports the claim that Raman Spectroscopy is an effective way to measure
+fractional abundance. Low training error for the linear model when predicting
+nanoSIMS using Raman indicate that, on average, Raman yields similar results.
+Linear modeling proved to be better than Lasso or Ridge approaches. Bayesian
+Credible Interval indicates there is a 95% chance the S.E. is between 2.3 and
+2.7.
