@@ -1,0 +1,420 @@
+---
+title: "R Notebook"
+author: "Tristan Caro"
+date: "`r Sys.Date()`"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+# Setup
+
+## Libraries
+
+```{r}
+library(tidyverse)
+library(tidyverse)
+library(glmnet)
+library(rstanarm)
+library(boot)
+library(geomtextpath)
+```
+
+## Functions
+
+```{r}
+calculate_mu <- function(a, F2, F1, FL, t2, t1 = 0) {
+  return(- (1/(t2 - t1)) * (log((a * FL - F2)/(a*FL - F1))))
+}
+
+calculate_sigma_mu <- function(a, F2, F1, FL, t2, t1 = 0, sigma_a = 0, sigma_F2 = 0, sigma_F1 = 0, sigma_FL = 0) {
+  return(
+    sqrt(
+      ((a*FL - F2) * sigma_F1)^2 +
+        
+      ((a*FL - F1) * sigma_F2)^2 +
+        
+      (a * (F1 - F2) * sigma_FL)^2 +
+        
+      (FL * (F1 - F2) * sigma_a)^2
+    ) / ( 
+      (t2-t1) * (a * FL - F1) * (a * FL - F2) 
+    )
+  )
+}
+
+```
+
+
+
+# Sensitivity Calculations
+
+```{r}
+test_dataset <- tibble(
+  a = 1, # assimilation factor is 1: assume autotrophic growth
+  F1 = 0, # ppm
+  # errors
+  sigma_a = 0, # no uncertainty in alpha because defined cultures
+  sigma_FL = 0, # uncertainty in FL is unknown: determine with pipetting?
+  sigma_F1 = 0, # at%: approx as zero because 2H natabund is negligible
+  sigma_F2 = 2.5 # at%: RMSE of proxy
+  ) %>% 
+  crossing(
+  FL = c(5, 10, 15, 20, 25, 30, 35, 40, 45, 50),
+  dt = c(1, 5, 7, 30, 60, 100),
+  frac_F2 = seq(-5, 0, by = 0.01) %>% exp() # microbial fractional progression to FL
+  ) %>% 
+  mutate(
+   F2 = F1 + FL * frac_F2, # model F2 values: at% 
+   mu.d = calculate_mu(a = a, F2 = F2, F1 = F1, FL = FL, t2 = dt),
+   TD.days = log(2) / mu.d,
+   sigma_mu.d = calculate_sigma_mu(
+      a = a, F2 = F2, F1 = F1, FL = FL, t2 = dt,
+      sigma_a = sigma_a, 
+      sigma_F2 = sigma_F2, 
+      sigma_F1 = sigma_F1, 
+      sigma_FL = sigma_FL
+    ),
+    rel_error = sigma_mu.d / mu.d
+  ) %>%
+  filter(!is.na(mu.d), !is.na(rel_error))
+
+
+```
+
+
+Generate a plot for multiple incubation times
+
+```{r}
+test_dataset %>% 
+  ggplot() +
+  aes(
+    x = TD.days,
+    y = rel_error,
+    color = as.factor(FL)
+    ) +
+  geom_line() +
+  scale_color_viridis_d(begin = 0.1, end = 0.9) +
+  scale_y_continuous(labels = scales::percent) + 
+  coord_cartesian(
+    ylim = c(0, 0.5),
+    xlim = c(0, 500)
+    ) +
+  #scale_x_log10() +
+  facet_wrap(vars(as.factor(dt)), scales = "free_x") +
+  theme_bw()
+```
+
+Generate a plot for 30 day incubation time
+```{r}
+
+p_30_day_sens <- test_dataset %>%
+  filter(dt == 30) |> 
+  ggplot() +
+  aes(
+    x = TD.days,
+    y = rel_error,
+    color = as.factor(FL)
+    ) +
+  geom_line() +
+  scale_color_viridis_d(begin = 0.1, end = 0.9) +
+  scale_y_continuous(labels = scales::percent) + 
+  coord_cartesian(
+    ylim = c(0, 0.5),
+    xlim = c(0, 200)
+    ) +
+  #scale_x_log10() +
+  #facet_wrap(vars(as.factor(dt)), scales = "free_x") +
+  labs(
+    x = "Generation Time (Days)",
+    y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
+    color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
+    caption = "Raman 2H-SIP sensitivity range for 30 day incubation"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom"
+  )
+p_30_day_sens
+
+cowplot::save_plot(
+  filename = "fig_output/p_30_day_sens.pdf", 
+  plot = p_30_day_sens,
+  base_height = 8,
+  base_width = 8
+  )
+
+```
+
+Generate a plot for 60 day incubation time
+```{r}
+# upper_lim <- test_dataset |> 
+#     filter(dt == 60) |> 
+#     filter(rel_error <= 0.5) |>
+#     filter(FL == 50) |> 
+#     pull(TD.days) |> 
+#     min()
+#   
+#   lower_lim <- test_dataset |> 
+#     filter(dt == d_t) |> 
+#     filter(rel_error <= 0.5) |>
+#     filter(FL == 50) |> 
+#     pull(TD.days) |> 
+#     max()
+
+p_60_day_sens <- test_dataset %>%
+  filter(dt == 60) |> 
+  ggplot() +
+  aes(
+    x = TD.days,
+    y = rel_error,
+    color = as.factor(FL)
+    ) +
+  geom_line() +
+  scale_color_viridis_d(begin = 0.1, end = 0.9) +
+  scale_y_continuous(labels = scales::percent) + 
+  coord_cartesian(
+    ylim = c(0, 0.5),
+    xlim = c(0, 400)
+    ) +
+  #scale_x_log10() +
+  #facet_wrap(vars(as.factor(dt)), scales = "free_x") +
+  labs(
+    x = "Generation Time (Days)",
+    #y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
+    #color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
+    caption = "Raman 2H-SIP sensitivity range for 60 day incubation"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom"
+  )
+p_60_day_sens
+
+
+```
+
+```{r}
+# upper_lim <- test_dataset |> 
+#   filter(dt == 30) |> 
+#   filter(rel_error <= 0.5) |>
+#   filter(FL == 50) |> 
+#   pull(TD.days) |> 
+#   min()
+# 
+# lower_lim <- test_dataset |> 
+#     filter(dt == 30) |> 
+#     filter(rel_error <= 0.5) |>
+#     filter(FL == 50) |> 
+#     pull(TD.days) |> 
+#     max()
+```
+
+
+Use a function to generate multiple plots with correct axes:
+```{r}
+plot_rel_error <- function(d_t, xlimits, include_legend = TRUE) {
+  upper_lim <- test_dataset |> 
+    filter(dt == d_t) |> 
+    filter(rel_error <= 0.5) |>
+    filter(FL == 20) |> 
+    pull(TD.days) |> 
+    min()
+  
+  lower_lim <- test_dataset |> 
+    filter(dt == d_t) |> 
+    filter(rel_error <= 0.5) |>
+    filter(FL == 20) |> 
+    pull(TD.days) |> 
+    max()
+  
+  test_dataset %>%
+    # Argument input here to filter dataset to correct incubation time:
+    filter(dt == d_t) |> 
+    filter(FL > 15) |> 
+    ggplot() +
+    aes(
+      x = TD.days,
+      y = rel_error,
+      color = as.factor(FL)
+      ) +
+    annotate(geom = "segment", x = lower_lim, xend = lower_lim, y = 0, yend = 0.5, color = "gray") +
+    annotate(geom = "segment", x = upper_lim, xend = upper_lim, y = 0, yend = 0.5, color = "gray") +
+    #annotate(geom = "label", x = upper_lim, y = 0.1, color = "black", label = paste0(round(upper_lim, 1), " d")) +
+    #annotate(geom = "label", x = lower_lim, y = 0.1, color = "black", label = paste0(round(lower_lim, 1), " d")) +
+    geom_line(linewidth = 1) +
+    scale_color_viridis_d(option = "plasma", begin = 0.1, end = 0.9) +
+    # Secondary axis with ticks marked
+    scale_x_continuous(
+      sec.axis = dup_axis(
+        breaks = c(round(upper_lim, 1), round(lower_lim, 1))
+        )
+      ) +
+    # Secondary axis with growth rate:
+    # scale_x_continuous(
+    #   sec.axis = sec_axis(~ log(2)/., breaks = c(0.1, 0.01, 0.002)),
+    #   
+    #   ) +
+    scale_y_continuous(labels = scales::percent) + 
+    coord_cartesian(
+      ylim = c(0, 0.5),
+      xlim = xlimits,
+      expand = FALSE
+      ) +
+    labs(
+      x = "Generation Time (Days)",
+      y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
+      color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
+      title = paste(d_t, "day")
+    ) +
+    theme_classic() +
+    theme(
+      legend.position = if_else(include_legend, "bottom", "NA"),
+      axis.text.x.top = element_text(angle = 45, hjust = 0),
+      axis.title.x.top = element_blank(),
+      #panel.border = element_rect(color = "black", size = 2, fill = NA),
+      #axis.ticks = element_line(linewidth = 1)
+    )
+}
+ 
+plot_rel_error(100, c(0, 650), FALSE)
+```
+
+## Plot Rel Error across inc times
+
+```{r}
+#dt = c(1, 5, 7, 30, 60, 100),
+
+# get the legend
+rel_error_legend <- cowplot::get_legend(plot_rel_error(1, c(0, 7), TRUE))
+
+rel_error_grid <- cowplot::plot_grid(
+  plot_rel_error(1, c(0, 50), FALSE),
+  plot_rel_error(5, c(0, 50), FALSE),
+  plot_rel_error(7, c(0, 50), FALSE),
+  plot_rel_error(30, c(0, 650), FALSE),
+  plot_rel_error(60, c(0, 650), FALSE),
+  plot_rel_error(100, c(0, 650), FALSE),
+  ncol = 2,
+  byrow = FALSE
+)
+
+rel_error_grid_w_legend <- cowplot::plot_grid(
+  # the plot we just made:
+  rel_error_grid,
+  # add the legend to the bottom:
+  rel_error_legend,
+  ncol = 1,
+  rel_heights = c(1, 0.1)
+)
+
+rel_error_grid_w_legend
+# 
+# cowplot::save_plot(
+#   filename = "fig_output/rel_error_grid_w_legend.pdf",
+#   plot = rel_error_grid_w_legend,
+#   base_height = 9, 
+#   base_width = 14
+#   )
+
+```
+
+
+Assess multiple sources of uncertainty
+```{r}
+
+# error matrix
+error_matrix <-
+  tribble(
+     ~use_a, ~use_FL, ~use_F1, ~use_F2, ~panel,
+     1,       1,      1,       1,       "all errors",
+     1,       0,      0,       0,       "a error only",
+     0,       1,      0,       0,       "FL error only",
+     0,       0,      1,       0,       "F1 error only",
+     0,       0,      0,       1,       "F2 error only"
+  ) %>%
+  mutate(panel = as_factor(panel))
+
+# constants
+model_data <- 
+  tibble(
+  a = 1, # assimilation factor is 1: assume autotrophic growth
+  t.days = 7, # days (doesn't actually matter, all cancels)
+  F1 = 0, # ppm
+  # errors
+  sigma_a = 0, # no uncertainty in alpha because defined cultures
+  sigma_FL = 0, # uncertainty in FL is unknown: determine with pipetting?
+  sigma_F1 = 0, # at%
+  sigma_F2 = 2.5 # at%
+) %>%
+  # dynamics
+  crossing(
+    FL = c(5, 10, 20, 30, 40, 50, 100), # label strength: at%
+    F2_interval = seq(-100, 0, by = 0.01) %>% exp() # fraction of F2
+  ) %>%
+  # mu calculations
+  mutate(
+    F2 = F1 + FL * F2_interval, # model F2 values: at%
+    t_factor = paste(t.days, "days") %>% as_factor(),
+    mu.1_day = calculate_mu(a = a, F2 = F2, F1 = F1, FL = FL, t2 = t.days),
+    TD.days = log(2) / mu.1_day
+  ) %>%
+  # error calculations
+  crossing(error_matrix) %>%
+  mutate(
+    sigma_mu.1_day = calculate_sigma_mu(
+      a = a, F2 = F2, F1 = F1, FL = FL, t2 = t.days,
+      sigma_a = use_a * sigma_a, 
+      sigma_F2 = use_F2 * sigma_F2, 
+      sigma_F1 = use_F1 * sigma_F1, 
+      sigma_FL = use_FL * sigma_FL
+    ),
+    rel_error = sigma_mu.1_day / mu.1_day
+  ) %>%
+  filter(!is.na(mu.1_day), !is.na(rel_error))
+
+# Find minimum error condition:
+error_minimum <- model_data %>% 
+  filter(panel == "all errors") %>% 
+  filter(FL == 30) %>% 
+  filter(is.finite(rel_error)) %>% 
+  filter(t.days == 7) %>% 
+  filter(TD.days / 7 < 100,
+         TD.days / 7 > 0.1) %>% 
+  group_by(FL) %>%
+  filter(rel_error == min(rel_error)) %>% 
+  select(TD.days, t.days, rel_error) %>% 
+  mutate(TD.days.t = TD.days / t.days)
+
+error_min_td.t = error_minimum %>% pull(TD.days.t)
+error_min_rel_error = error_minimum %>% pull(rel_error)
+```
+
+Plot the sources of uncertainty
+```{r}
+model_data %>%
+  filter(panel == "all errors") %>% 
+  ggplot() + 
+  aes(
+    x = TD.days / t.days, 
+    y = rel_error, 
+    color = as.factor(FL), 
+    label = paste0(as.factor(FL), "%")
+    ) + 
+  #geom_line() +
+  geom_vline(xintercept = error_min_td.t, color = "gray", linetype = "dotted") +
+  geom_line() +
+  #geom_textline(hjust = "ymin", vjust = 1.5, show.legend = FALSE) +
+  scale_x_log10(sec.axis = dup_axis(), breaks = c(0.1, 0.25, 0.5, 1, 2.5, 5, 7.5, 10, 50, 100)) +
+  scale_y_continuous(labels = scales::percent) + 
+  scale_color_viridis_d(option = "plasma", begin = 0, end = 0.8) +
+  coord_cartesian(ylim = c(0, 0.5), xlim = c(0.1, 100), expand = FALSE) +
+  labs(
+    x = latex2exp::TeX("$\\frac{T_G}{\\Delta t}$"), 
+    y = latex2exp::TeX("$\\frac{\\sigma_{\\mu}}{\\mu}$"),
+    color = "Label Strength (%)"
+  ) + 
+  #facet_wrap(~panel) +
+  theme_bw()
+```
+
