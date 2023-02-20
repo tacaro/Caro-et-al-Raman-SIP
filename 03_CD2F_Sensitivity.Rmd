@@ -211,7 +211,7 @@ p_60_day_sens
 ```
 
 
-Use a function to generate multiple plots with correct axes:
+### Use a function to generate multiple plots with correct axes:
 ```{r}
 plot_rel_error <- function(d_t, xlimits, include_legend = TRUE) {
   upper_lim <- test_dataset |> 
@@ -392,7 +392,7 @@ error_min_rel_error = error_minimum %>% pull(rel_error)
 
 Plot the sources of uncertainty
 ```{r}
-model_data %>%
+p_rel_error_all <- model_data %>%
   filter(panel == "all errors") %>% 
   ggplot() + 
   aes(
@@ -401,20 +401,40 @@ model_data %>%
     color = as.factor(FL), 
     label = paste0(as.factor(FL), "%")
     ) + 
-  #geom_line() +
-  geom_vline(xintercept = error_min_td.t, color = "gray", linetype = "dotted") +
-  geom_line() +
-  #geom_textline(hjust = "ymin", vjust = 1.5, show.legend = FALSE) +
-  scale_x_log10(sec.axis = dup_axis(), breaks = c(0.1, 0.25, 0.5, 1, 2.5, 5, 7.5, 10, 50, 100)) +
+  geom_vline(
+    xintercept = error_min_td.t, 
+    color = "gray", 
+    linetype = "dotted") +
+  geom_line(size = 1.25) +
+  geom_textline(
+    hjust = "ymin",
+    vjust = 1.5, 
+    show.legend = FALSE
+    ) +
+  scale_x_log10(
+    position = "top",
+    breaks = c(0.1, 0.25, 0.5, 1, 2.5, 5, 10, 25)
+    ) +
   scale_y_continuous(labels = scales::percent) + 
   scale_color_viridis_d(option = "plasma", begin = 0, end = 0.8) +
-  coord_cartesian(ylim = c(0, 0.5), xlim = c(0.1, 100), expand = FALSE) +
+  coord_cartesian(ylim = c(0, 0.5), xlim = c(0.1, 25), expand = FALSE) +
   labs(
     x = latex2exp::TeX("$\\frac{T_G}{\\Delta t}$"), 
     y = latex2exp::TeX("$\\frac{\\sigma_{\\mu}}{\\mu}$"),
     color = "Label Strength (%)"
   ) + 
   #facet_wrap(~panel) +
-  theme_bw()
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 0),
+    legend.position = "bottom"
+  )
+
+cowplot::save_plot(
+  plot = p_rel_error_all,
+  filename = "fig_output/rel_error_all.pdf",
+  base_height = 5,
+  base_width = 5
+)
 ```
 
