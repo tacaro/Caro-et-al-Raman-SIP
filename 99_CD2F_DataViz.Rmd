@@ -66,12 +66,22 @@ p_co_registered <- co_registered %>%
   ggplot(
     aes(x = at2H_percent_dtc,
         y = cd_pc_corr,
-        color = as.factor(f_l),
-        group = organism.x,
-        label = cell_id
+        #color = as.factor(f_l),
+        #group = organism.x,
+        #label = cell_id
     )
   ) +
+  stat_smooth(
+    formula = y ~ x,
+    #formula = y ~ splines::bs(x, 3),
+    size = 0.5,
+    method = 'lm',
+    se = TRUE,
+    level = .99,
+    color = "#1a9684"
+  ) +
   geom_point(
+    aes(shape = organism.x),
     alpha = 0.5,
     size = 2
   ) +
@@ -81,18 +91,10 @@ p_co_registered <- co_registered %>%
     color = "gray",
     alpha = 1,
   ) +
-  stat_smooth(
-    formula = y ~ x,
-    #formula = y ~ splines::bs(x, 3),
-    size = 0.5,
-    method = 'lm',
-    se = FALSE,
-    color = "red"
-  ) +
-  facet_wrap(vars(organism.x)) +
+  #facet_wrap(vars(organism.x)) +
   coord_cartesian(
-    xlim = c(0,50), 
-    ylim = c(0,50)
+    xlim = c(0,40), 
+    ylim = c(0,40)
   ) +
   scale_color_viridis_d(
     end = 0.9,
@@ -102,11 +104,11 @@ p_co_registered <- co_registered %>%
   labs(
     x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
     y = latex2exp::TeX("$^2F\\%_{Raman}$"),
-    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$")
+    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$"),
+    shape = ""
   ) +
   theme(
-    legend.position = "bottom",
-    ggside.panel.scale = 2
+    legend.position = "bottom"
   )
 p_co_registered
 ```
@@ -120,18 +122,8 @@ p_co_registered_fitted <- co_registered_fit %>%
         y = `CD%`,
         color = as.factor(f_l),
         #group = organism,
-        label = cell_id
+        #label = cell_id
     )
-  ) +
-  geom_point(
-    alpha = 0.5,
-    size = 2
-  ) +
-  geom_abline(
-    slope = 1,
-    linetype = "dashed",
-    color = "gray",
-    alpha = 1,
   ) +
   stat_smooth(
     formula = y ~ x,
@@ -140,11 +132,21 @@ p_co_registered_fitted <- co_registered_fit %>%
     method = 'lm',
     se = TRUE,
     level = 0.99, # 99% confidence interval
-    color = "red",
-    fill = "gray"
-    
+    color = "#1a9684",
+    fill = "#1a9684"
   ) +
-  #facet_wrap(vars(organism)) +
+  geom_point(
+    aes(shape = organism), 
+    alpha = 1,
+    size = 2.5
+  ) +
+  geom_abline(
+    slope = 1,
+    linetype = "dashed",
+    color = "gray",
+    alpha = 1,
+  ) +
+  facet_wrap(vars(organism), nrow = 2) +
   coord_cartesian(
     xlim = c(0,25), 
     ylim = c(0,45)
@@ -157,13 +159,20 @@ p_co_registered_fitted <- co_registered_fit %>%
   labs(
     x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
     y = latex2exp::TeX("$^2F\\%_{Raman}$"),
-    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$")
+    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$"),
+    shape = "Organism"
   ) +
   theme(
-    legend.position = "bottom",
-    ggside.panel.scale = 2
+    legend.position = "right"
   )
 p_co_registered_fitted
+
+cowplot::save_plot(
+  plot = p_co_registered_fitted,
+  filename = "fig_output/co_reg_fit.pdf",
+  base_height = 6,
+  base_width = 6
+  )
 ```
 
 
@@ -353,6 +362,13 @@ p_cd_fl <- co_registered_fit %>%
     strip.background = element_blank()
   )
 p_cd_fl
+
+cowplot::save_plot(
+  plot = p_cd_fl,
+  filename = "fig_output/cd_fl.pdf",
+  base_height = 4,
+  base_width = 8
+)
 ```
 
 ## 2F FL
@@ -400,6 +416,13 @@ p_2f_fl <- co_registered %>%
     strip.background = element_blank()
   )
 p_2f_fl
+
+cowplot::save_plot(
+  plot = p_2f_fl,
+  filename = "fig_output/2f_fl.pdf",
+  base_height = 4,
+  base_width = 8
+)
 ```
 
 ## Cowplot: CD-FL and 2F-FL
