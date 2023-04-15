@@ -9,6 +9,12 @@ editor_options:
 
 # Setup
 
+## Clear the environment
+
+```{r}
+rm(list=ls())
+```
+
 ## Load libraries
 
 ```{r}
@@ -46,8 +52,8 @@ fitted_xy_data <- readRDS("cache/peak_data_xy.RDS")
 calculate_growth <- source("source/Calculate_Growth.R")
 ```
 
-
 # Proxy generation
+
 ```{r}
 proxy_data <- broom::tidy(lm(data = co_registered_fit, `CD%`  ~ at2H_percent_dtc))
 proxy_y_int <- proxy_data %>% 
@@ -62,6 +68,7 @@ proxy_slope <- proxy_data %>%
 ```
 
 # Proxy generation - SRB
+
 ```{r}
 proxy_data_SRB <- broom::tidy(lm(
   data = co_registered_fit %>% filter(organism == "T. hydrogeniphilus"), 
@@ -78,6 +85,7 @@ proxy_slope_SRB <- proxy_data_SRB %>%
 ```
 
 # Proxy generation - Mb
+
 ```{r}
 proxy_data_Mb <- broom::tidy(lm(
   data = co_registered_fit %>% filter(organism == "M. NSHQ14"), 
@@ -93,14 +101,161 @@ proxy_slope_Mb <- proxy_data_Mb %>%
   pull()
 ```
 
-## Quickplot the proxy fit
+# Calculate LOD and LOQ
+
+In order to calculate the signal for limit of quantitation: eq. 4.7.4 [https://chem.libretexts.org/Courses/BethuneCookman_University/B-CU%3A_CH-345_Quantitative_Analysis/Book%3A_Analytical_Chemistry_2.1\_(Harvey)/04%3A_Evaluating_Analytical_Data/4.07%3A_Detection_Limits](https://chem.libretexts.org/Courses/BethuneCookman_University/B-CU%3A_CH-345_Quantitative_Analysis/Book%3A_Analytical_Chemistry_2.1_(Harvey)/04%3A_Evaluating_Analytical_Data/4.07%3A_Detection_Limits){.uri}
+
+The ability to detect the analyte with confidence is not the same as the ability to report with confidence its concentration, or to distinguish between its concentration in two samples. For this reason the American Chemical Society's Committee on Environmental Analytical Chemistry recommends the limit of quantitation, (SA)LOQ:
+
+$(S_A)_{LOQ} = S_{mb} + 10\sigma_{mb}$ Where - $S_{mb}$ is the signal of the method blank - $S_{A}$ is the signal analyte at the $LOQ$ level of quantification - $\sigma_{mb}$ is the standard error of the method blank
+
+Signals $< 3\sigma$ are considered "analyte not detected". Signals between $3\sigma$ and $10\sigma$ are considered detected but not quantifiable "region of detection". Signals $>10\sigma$ are considered within the region of quantification. Therefore, $10\sigma$ is chosen as the *limit of quantification* (LOQ).
+
+Here we calculated both LOD and LOQ as:
+
+$$
+\begin{aligned}
+S_{LOQ} &= S_{mb} + 10\sigma_{mb} \\
+S_{LOD} &= S_{mb} + 3\sigma_{mb}
+\end{aligned}
+$$
+
+```{r}
+# Calculate signal of the method blank (natural abundance sample)
+S_mb_cd <- co_registered_fit |> 
+  filter(f_l == 0) |> 
+  select(`CD%`) |> 
+  pull() |> 
+  mean(na.rm = TRUE)
+
+S_mb_SIMS <- co_registered_fit |> 
+  filter(f_l == 0) |> 
+  select(at2H_percent_dtc) |> 
+  pull() |> 
+  mean(na.rm = TRUE)
+
+# Calculate the standard error of the method blank
+sigma_mb_cd <- co_registered_fit |> 
+  filter(f_l == 0) |> 
+  select(`CD%`) |> 
+  pull() |> 
+  sd(na.rm = TRUE)
+
+sigma_mb_SIMS <- co_registered_fit |> 
+  filter(f_l == 0) |> 
+  select(at2H_percent_dtc) |> 
+  pull() |> 
+  sd(na.rm = TRUE)
+
+paste("The signal of the Raman blank is", round(S_mb_cd,3) , "%")
+paste("The signal of the nanoSIMS blank is", round(S_mb_SIMS,3) , "%")
+paste("The standard error of the Raman blank is", round(sigma_mb_cd,3) , "%")
+paste("The standard error of the nanoSIMS blank is", round(sigma_mb_SIMS,3) , "%")
+
+# Calculate LOD as signal_mb + 3sigma:
+LOD_cd <- S_mb_cd + (3 * sigma_mb_cd)
+LOD_SIMS <- S_mb_SIMS + (3 * sigma_mb_SIMS)
+
+# Calculate LOQ as signal_mb + 10sigma
+LOQ_cd <- S_mb_cd + (10 * sigma_mb_cd)
+LOQ_SIMS <- S_mb_SIMS + (10 * sigma_mb_SIMS)
+
+paste("The level of detection of Raman is", round(LOD_cd, 3), "atom %")
+paste("The level of detection of nanoSIMS is", round(LOD_SIMS, 3), "atom %")
+paste("The level of quantification of Raman is", round(LOQ_cd, 3), "atom %")
+paste("The level of quantification of nanoSIMS is", round(LOQ_SIMS, 3), "atom %")
+
+LOD_LOQ_exported <- tibble(
+  LOD_CD_percent = LOD_cd,
+  LOQ_CD_percent = LOQ_cd,
+  LOD_nanoSIMS = LOD_SIMS,
+  LOQ_nanoSIMS = LOQ_SIMS
+)
+
+writexl::write_xlsx(LOD_LOQ_exported, "data_output/LOD_LOQ_data.xlsx")
+```
+
+# Calculate assimilation efficiency
+
+The hydrogen assimilation efficiency from water $a_{water}$ or simply referred to here as $a$ is defined as the fraction of an organism's biomass hydrogen that is acquired from its growth water as opposed to other sources. $a$ is therefore a fraction between zero and 1, with `1` representing "all H sourced from water," `0.5` representing "50% of H sourced from water, 50% from other sources (e.g., carbon source)," etc.
+
+$a$ is calculated as the incorporation of $D_2O$ over multiple label strengths. In essence, the slope of the line of `x = label strength` and `y = biomass at2H` as label strength increases.
+
+$a$ is a crucial component of growth rate calculations, as it defines the maximum enrichment an organism can ostensibly reach in the presence of tracer. For example, if an organism is grown in 50% $D_2O$ and it has an `a = 0.9`, its maximum enrichment would be `0.9*50% = 45 %`.
+
+Here we calculate `a` using both Raman and nanoSIMS data but report a using Raman data, for reasons discussed in the manuscript. In brief, we want to be sure we are measuring non-exchangable H, which we believe Raman is indeed measuring.
+
+```{r}
+co_registered_fit_slim <- co_registered_fit |> 
+  filter(f_l < 40) |> 
+  select(
+    f_l, 
+    `CD%`,
+    at2H_percent_dtc,
+    organism
+    )
+
+raman_assim_data <- co_registered_fit_slim |> 
+  select(!at2H_percent_dtc) |> 
+  group_by(organism) |> 
+  # nest the data for a linear model
+  tidyr::nest(
+    raman_data = c(`CD%`, f_l),
+    #SIMS_data = c(at2H_percent_dtc, f_l),
+  ) |> 
+  # generate linear models and output the data in a tidy format
+  mutate(
+    raman_fit = purrr::map(raman_data, ~lm(`CD%` ~ f_l, data = .x)),
+    #SIMS_fit = purrr::map(SIMS_data, ~lm(at2H_percent_dtc ~ f_l, data = .x)),
+    raman_estimates = purrr::map(raman_fit, broom::tidy),
+    #SIMS_estimates = purrr::map(SIMS_fit, broom::tidy),
+    raman_summary = purrr::map(raman_fit, broom::glance),
+    #SIMS_summary = purrr::map(SIMS_fit, broom::glance)
+  ) %>% tidyr::unnest(c(raman_estimates)) |> 
+  mutate(method = "Raman") |> 
+  select(method, organism, term, estimate, std.error, statistic, p.value)
+
+SIMS_assim_data <- co_registered_fit_slim |> 
+  select(!`CD%`) |> 
+  group_by(organism) |> 
+  # nest the data for a linear model
+  tidyr::nest(
+    #raman_data = c(`CD%`, f_l),
+    SIMS_data = c(at2H_percent_dtc, f_l),
+  ) |> 
+  # generate linear models and output the data in a tidy format
+  mutate(
+    #raman_fit = purrr::map(raman_data, ~lm(`CD%` ~ f_l, data = .x)),
+    SIMS_fit = purrr::map(SIMS_data, ~lm(at2H_percent_dtc ~ f_l, data = .x)),
+    #raman_estimates = purrr::map(raman_fit, broom::tidy),
+    SIMS_estimates = purrr::map(SIMS_fit, broom::tidy),
+    #raman_summary = purrr::map(raman_fit, broom::glance),
+    SIMS_summary = purrr::map(SIMS_fit, broom::glance)
+  ) %>% tidyr::unnest(c(SIMS_estimates)) |> 
+  mutate(method = "nanoSIMS") |> 
+  select(method, organism, term, estimate, std.error, statistic, p.value)
+
+
+# Make a lil' summary tibble
+assim_data <- bind_rows(raman_assim_data, SIMS_assim_data) |> 
+  filter(term != "(Intercept)") |> 
+  mutate(term = case_when(term == "f_l" ~ "a"))
+
+knitr::kable(assim_data)
+
+# Write the data
+writexl::write_xlsx(assim_data, path = "data_output/assim_data.xlsx")
+
+```
+
+# Quickplot the proxy fit
 
 ```{r}
 co_registered_fit %>% 
   ggplot(
     aes(
-      x = at2H_percent_dtc,
-      y = `CD%`
+      y = at2H_percent_dtc,
+      x = `CD%`
     )
   ) +
   geom_point() +
@@ -119,13 +274,422 @@ co_registered_fit %>%
   theme_classic()
 ```
 
+# Calculate SD/SE
+
+Here we estimate the standard deviation (SD) of each set of samples (grouped by label strength and method). Standard deviations are used for downstream error propagation.
+
+Here we estimate the standard error (SE) as the standard error of the mean. The standard deviation $\sigma$ of the population being sampled, in this case, cannot be known. Therefore, the SE of the mean is estimated by replacing $\sigma$ with the sample standard deviation $\sigma_x$.
+
+Here, the use of standard error is appropriate
+
+$$
+s_{\bar{x}} = \frac{\sigma_x}{\sqrt{n}}
+$$
+
+```{r}
+co_registered_fit_summarized <- co_registered_fit |> 
+  group_by(f_l) |> 
+  summarize(
+    mean_cdpc = mean(`CD%`, na.rm = TRUE),
+    sd_cdpc = sd(`CD%`, na.rm = TRUE),
+    mean_2F = mean(at2H_percent_dtc, na.rm = TRUE),
+    sd_2F = sd(at2H_percent_dtc, na.rm = TRUE),
+    n = n()
+    ) |> 
+  mutate(
+    # calculate SE from the sample standard deviation
+    SE_cdpc = sd_cdpc / sqrt(n),
+    SE_2F = sd_2F / sqrt(n)
+  )
+
+co_registered_fit_summarized |> knitr::kable()
+
+co_registered_fit_summarized |> 
+  summarize(
+    SE_total_cdpc = mean(SE_cdpc),
+    SE_total_2F = mean(SE_2F)
+  )
+```
+
+## Quickplot the SD
+
+```{r}
+co_registered_fit_summarized |> 
+  pivot_longer(cols = c(sd_cdpc, sd_2F), names_to = "method", values_to = "SD") |> 
+  mutate(method = case_match(method,
+    "sd_2F" ~ "nanoSIMS",
+    "sd_cdpc" ~ "Raman"
+  )) |> 
+  ggplot(aes(
+    x = f_l,
+    y = SD,
+    fill = method
+  )) +
+  geom_col(position = position_dodge(5), width = 5, color = "black") +
+  scale_fill_manual(values = c("black", "white")) +
+  coord_cartesian(expand = FALSE, xlim = c(-5, 60)) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_x_continuous(labels = scales::percent_format(scale = 1),
+                     breaks = c(0, 10, 20, 30, 40, 50)) +
+  theme_classic() +
+  labs(
+    x = latex2exp::TeX("Tracer Strength $^2F $ (at. %)"),
+    y = latex2exp::TeX("$\\sigma_{^2F}$ (at. %)"),
+    fill = "Method"
+  )
+```
+
+## Quickplot the SE
+
+In the case the SE is to be used:
+
+```{r}
+co_registered_fit_summarized |> 
+  # Pivot columns to separate out by raman or nanosims
+  pivot_longer(
+    cols = c(SE_cdpc, SE_2F),
+    names_to = "method",
+    values_to = "SE"
+  ) |> 
+  # Rename the values to be human readable
+  mutate(
+    method = case_match(
+      method,
+      "SE_cdpc" ~ "Raman",
+      "SE_2F" ~ "nanoSIMS"
+    )
+  ) |> 
+  ggplot() +
+  aes(
+    x = f_l,
+    y = SE,
+    #fill = method,
+    color = method
+  ) +
+  geom_line() +
+  ggsci::scale_color_jco() +
+  ggsci::scale_fill_jco() +
+  theme_classic() +
+  labs(
+    x = latex2exp::TeX("Label Strength ($^2F$%)"),
+    y = latex2exp::TeX("$s_{\\bar{x}} $"),
+    color = ""
+  ) +
+  theme(
+    legend.position = "right"
+  )
+```
+
+## Save the data summary
+
+```{r}
+write_rds(co_registered_fit_summarized, file = "cache/coreg_data_summary.rds")
+```
+
+
+# Linear model of CD/2F versus F_L
+
+Here we calculate the slope and linear intercept of our Raman (CD) and nanoSIMS (2F)- derived data.
+
+```{r}
+cdfl_model <- broom::tidy(
+  lm(
+    data = co_registered_fit %>% 
+      filter(f_l < 40), 
+    `CD%`  ~ f_l
+    )
+  )
+
+f2fl_model <- broom::tidy(
+  lm(
+    data = co_registered_fit %>% 
+      filter(f_l < 40),
+    at2H_percent_dtc ~ f_l
+  )
+)
+```
+
+# Calculate DF
+
+Here we define dilution factor (DF) as:
+
+$$
+DF = \frac{F_{after} - F_{before}}{F_{added} - F_{before}}
+$$ 
+where F denotes isotope fraction (at. %) of biomass before and after sample preparation, as well as that of the diluent material ($F_{added}$).
+
+Here, we take the Raman-derived $^2F$ as the *before* value, the nanoSIMS as the *after* value, and natural abundance hydrogen as the *added* value. Because the natural abundance of deuterium is negligible in comparison to the label strengths used for this study, we set $F_{added} = 0 \%$.
+
+For the uncertainty in the DF, we use propagation of uncertainty by quadriture by calculating hte partial derivatives of the equation with respect to each variable. We convert the equation to the following for ease of reading:
+
+$$
+D = \frac{A - B}{C - B}
+$$
+
+where:
+
+$$
+\begin{aligned}
+A &= F_{after} \\
+B &= F_{before} \\
+C &= F_{added} \\
+\end{aligned} \\
+$$
+
+
+$$
+\begin{aligned}
+
+\sigma_{D} = \sqrt{
+\left(\frac{\partial D}{\partial A} \sigma_A\right)^2 + \left(\frac{\partial D}{\partial B} \sigma_B\right)^2 + \left(\frac{\partial D}{\partial C} \sigma_C\right)^2
+}
+
+\end{aligned}
+$$
+
+Taking the partial derivatives of DF with respect to A, B, and C:
+
+$$
+\begin{aligned}
+\sigma_A = \frac{\partial D}{\partial A} &= \frac{1}{C-B} \\
+
+\sigma_B =\frac{\partial D}{\partial B} &= \frac{A-C}{(C-B)^2} \\
+
+\sigma_C = \frac{\partial D}{\partial C} &= \frac{B-A}{(C-B)^2} \\
+
+\end{aligned}
+$$
+
+Substituting these in to the formula for propagated uncertainty:
+
+$$
+\begin{aligned}
+
+\sigma_D &= \sqrt{
+\left(\frac{\partial D}{\partial A} \cdot \sigma_A\right)^2 +
+\left(\frac{\partial D}{\partial B} \cdot \sigma_B\right)^2 +
+\left(\frac{\partial D}{\partial C} \cdot \sigma_C\right)^2
+}
+
+\\ \\
+
+\sigma_D &= \sqrt{
+\left(\frac{1}{C-B} \cdot \sigma_A\right)^2 +
+\left(\frac{A-C}{(C-B)^2} \cdot \sigma_B\right)^2 +
+\left(\frac{B-A}{(C-B)^2} \cdot \sigma_C\right)^2
+}
+
+\end{aligned}
+$$
+
+
+
+```{r}
+calculate_sigma_DF <- function(A, B, C, sA, sB, sC) {
+  sigma_DF <- sqrt(
+    (( 1/ (C-B) * sA)^2 ) +
+      
+    ((( (A-C) / (C-B)^2 * sB)^2) +
+      
+    (( (B-A) / (C-B)^2) * sC)^2)
+  )
+  return(sigma_DF)
+}
+
+
+```
+
+```{r}
+# Define a natural abundance value. Here we use VSMOW as natural abundance differences
+# Are negligible in comparison to at. % values
+
+R_VSMOW <- 0.0001557632399 #2H/1H
+F_VSMOW <- R_VSMOW / (1 + R_VSMOW) # 2H / (1H + 2H)
+
+dilution_factors <- co_registered_fit_summarized |> 
+  filter(!f_l %in% c(0)) |>
+  rename(
+    F_before = mean_cdpc,
+    F_after = mean_2F,
+    sF_before = sd_cdpc,
+    sF_after = sd_2F
+  ) |> 
+  mutate(
+    F_added = F_VSMOW,
+    sF_added = 0 # assume no uncertainty in what constitutes "natural abundance"
+  ) |> 
+  # calculate DF:
+  mutate(
+    DF = (F_after - F_before) / (F_added - F_before),
+    sDF = calculate_sigma_DF(
+      A = F_after,
+      B = F_before,
+      C = F_added,
+      sA = sF_after,
+      sB = sF_before,
+      sC = sF_added
+    )
+  )
+  
+calculated_mean_DF <- dilution_factors |> pull(DF) |> mean()
+
+calculated_sd_DF <- dilution_factors |> pull(DF) |> sd()
+
+
+```
+
+
+## Plot the DF and sDF
+
+```{r}
+dilution_factors |> 
+  ggplot(
+    aes(
+      x = f_l,
+      y = DF
+    )
+  ) +
+  geom_col() +
+  geom_point() +
+  geom_errorbar(
+    width = 3,
+    aes(
+      ymin = DF - sDF,
+      ymax = DF + sDF)
+  ) +
+  geom_hline(yintercept = 0) +
+  coord_cartesian(expand = FALSE, xlim = c(0, 55)) +
+  theme_classic() +
+  labs(
+    x = latex2exp::TeX("Label Strength ($^2F$%)"),
+    y = latex2exp::TeX("$^2F $ Dilution Factor")
+  )
+```
+
+
+# Back-Calculate 2F
+
+Now, we can use our generated DF and error associated with the DF to constrain error that is associated with nanoSIMS-derived estimates of $^2F$
+
+$$
+F_{before} = \frac{F_{after} - (F_{added} \cdot DF)}{1 - DF}
+$$
+
+Or, using the abbreviations from above:
+$$
+B = \frac{A - (C \cdot D)}{1 - D}
+$$
+
+But, we must also back-propagate the error now associated with DF with the following formula:
+
+$$
+\begin{aligned}
+
+\sigma_B &= \sqrt{
+\left(\frac{\partial B}{\partial A} \cdot \sigma_A\right)^2 +
+\left(\frac{\partial B}{\partial C} \cdot \sigma_C\right)^2 +
+\left(\frac{\partial B}{\partial D} \cdot \sigma_D\right)^2
+} 
+\\ \\ 
+
+\sigma_B &= \sqrt{
+\left( \frac{1}{1-D} \cdot \sigma_A\right)^2 +
+\left( -\frac{D}{1-D} \cdot \sigma_C\right)^2 +
+\left( \frac{A-C}{(1-D)^2} \cdot \sigma_D\right)^2
+} 
+
+\end{aligned}
+$$
+
+
+
+```{r}
+calculate_F_before <- function(A, C, D) {
+  B <- (A - (C * D)) / (1 - D)
+  return(B)
+}
+
+calculate_sF_before <- function(A, C, D, sA, sC, sD) {
+  sB <- sqrt(
+    (((1 / (1-D)) * sA) ^2) +
+    (((-(D / (1 - D))) * sC) ^2) +
+    (((A - C) / (1 - D)^2) * sD)^2
+  )
+  return(sB)
+}
+
+## TEST: this should evaluate to 3.112...
+# calculate_sF_before(A = 4.9, C = .00015, D = 0.56, sA = 0.3, sC = 0, sD = 0.12)
+```
+
+```{r}
+dilution_factors <- dilution_factors |> 
+  mutate(
+    F_before_backcalc = calculate_F_before(
+      A = F_after,
+      C = F_added,
+      D = DF
+    ),
+    sF_before_backcalc = calculate_sF_before(
+      A = F_after,
+      sA = sF_after,
+      C = F_added,
+      sC = sF_added,
+      D = DF,
+      sD = sDF
+    )
+  )
+```
+
+## Plot+Save the back-calc data
+```{r}
+dilution_factors |> 
+  ggplot(
+    aes(
+      x = f_l,
+      y = F_before_backcalc
+    )
+  ) +
+  geom_col() +
+  geom_point() +
+  geom_errorbar(
+    aes(
+      ymin = F_before_backcalc - sF_before_backcalc,
+      ymax = F_before_backcalc + sF_before_backcalc
+    ),
+    width = 3
+  ) +
+  geom_point(
+    aes(x = f_l,
+        y = F_before),
+    color = "red"
+    ) +
+    geom_errorbar(
+    aes(
+      ymin = F_before - sF_before,
+      ymax = F_before + sF_before
+    ),
+    width = 3,
+    color = "red"
+  ) +
+  coord_cartesian(expand = FALSE, xlim = c(0, 55)) +
+  labs(
+      x = latex2exp::TeX("Label Strength ($^2F$%)"),
+      y = latex2exp::TeX("$^2F $ Calculated from DF")
+    ) +
+  theme_classic()
+
+write_rds(dilution_factors, file = "cache/dilution_factors.rds")
+```
+
+
 # Generate test dataset
 
 ```{r}
 test_data <- tibble(
   experiment = "A",
   a = 1, # assimilation efficiency assumed to be 1
-  f_l = 30, # label strenght is 30 atom % D2O
+  f_l = 30, # label strength is 30 atom % D2O
   t = 60, # incubation time is 60 days
   f_0 = 0.0000000001, # f0, biomass at t0, assumed to be natural abundance of the deuterium isotope
   f_t = abs(rnorm(
@@ -282,27 +846,6 @@ test_data_proxied %>%
   geom_line(alpha = 0.5)
 ```
 
-
-# CD-FL and 2F-FL comparison
-
-```{r}
-cdfl_model <- broom::tidy(
-  lm(
-    data = co_registered_fit %>% 
-      filter(f_l < 40), 
-    `CD%`  ~ f_l
-    )
-  )
-
-f2fl_model <- broom::tidy(
-  lm(
-    data = co_registered_fit %>% 
-      filter(f_l < 40),
-    at2H_percent_dtc ~ f_l
-  )
-)
-```
-
 # Error analysis
 
 ```{r}
@@ -396,6 +939,7 @@ p_co_registered_fit_w_se_inset
 ```
 
 ### Track Standard Error
+
 ```{r}
 co_registered_fit_w_se %>% 
   pivot_longer(
@@ -413,7 +957,6 @@ co_registered_fit_w_se %>%
     )
   ) + geom_line()
 ```
-
 
 ### Identify Raman/nanoSIMS measurement error
 
@@ -524,4 +1067,3 @@ p_error_u_d_var <- error_u_d_var%>%
   scale_y_log10()
 plotly::ggplotly(p_error_u_d_var)
 ```
-

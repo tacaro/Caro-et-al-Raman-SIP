@@ -1,0 +1,119 @@
+---
+title: "Supplementary Information: Quantitative measurement of microbial growth with Raman microspectroscopy"
+number-sections: true
+editor: visual
+format:
+  pdf:
+    code-line-numbers: true
+    include-in-header: 
+      text: '\usepackage{lineno}\linenumbers'
+bibliography: references.bib
+csl: vancouver.csl
+---
+
+Tristan A. Caro$^1$, Srishti Kashyap$^1$, George Brown$^2$, Claudia Chen$^2$, Sebastian Kopf$^1$, Alexis Templeton$^1$
+
+1.  Department of Geological Sciences, University of Colorado Boulder. Boulder CO, USA
+2.  Laboratory for Interdisciplinary Statistical Analysis, University of Colorado Boulder. Boulder CO, USA
+
+**This file includes:**
+
+-   Supplementary Text
+
+-   Supplementary Figures 1 - \#
+
+-   Supplementary References
+
+# Supplementary Text
+
+## Level of Detection and Quantification
+
+Level of detection (LOD) and level of quantification (LOQ) are quantified according to [@macdougall1980]:
+
+$$
+\begin{aligned}
+S_{LOQ} &= S_{mb} + 10\sigma_{mb} \\
+S_{LOD} &= S_{mb} + 3\sigma_{mb}
+\end{aligned}
+$$
+
+Where $S_{LOQ}$ is signal limit of quantification, Smb is the signal of the method blank, σmb is the standard deviation of the method blank, and $S_{LOD}$ is the signal limit of detection. In this work, we use σmb equal to the standard deviation of cell deuterium abundance $^2F_{biomass}$ measured in the natural abundance control ($^2F_{label} = 0\%$).
+
+## Growth rate error propagation
+
+Uncertainty in growth rate measurements ($\sigma_{\mu}$) depends on uncertainty in each parameter of the growth rate calculation:
+
+$$
+\mu = - \frac{1}{t}ln (\frac{F_T - a \cdot F_L}{F_0 - a \cdot F_L})
+$$
+
+We propagated error of individual parameters according to (REF Caro et al. 2023) to uncertainty in growth rate using standard propagation of uncertainty via partial derivatives, assuming all measurements to be uncorrelated ####FIX:
+
+$$
+\sigma_{\mu} = \frac{
+(aF_L - F_T)^2 \sigma^2_{F_0}
+}
+{
+t \cdot (aF_L - F_0) \cdot (aF_L - F_T)
+}
+$$
+
+For the purposes of this work, we exclude the uncertainty in SIP incubation time ($t$) as we assume that this quantity is negligible for SIP incubations that last multiple days ($\sigma_T = 0$) . We advise future researchers using rapidly growing organisms and short incubation times to estimate and include this value.
+
+## Surface-enhanced Raman spectroscopy
+
+Surface-enhanced Raman spectroscopy (SERS) is a methodology that employs the adsorption of metal ions (e.g., Ag, Au, Cu, Zn, etc.) to a target substrate [@langer2020; @cui2019] in order to enhance Raman scattering effects. Surface enhancement with modern SERS methodologies have resulted in signal enhancements up to $10^5$ -- $10^6$ [@langer2020]. Therefore, we hypothesized that SERS could be a useful technique in dramatically increasing the sensitivity of Raman spectroscopy for the detection of deuterium in microbial biomass.
+
+To this end, we synthesized silver nanoparticles (AgNPs) using the trisodium citrate reduction method adapted from [@cui2019a; @mulfinger2007; @lee2002]. AgNPs were synthesized by dissolving 72mg of AgNO3 in 400mL ultrapure water (18.2 MΩ cm) in an Erlenmeyer flask. The solution was heated to initial boiling (\~90˚C) under vigorous stirring. 8mL of 1% wt/vol trisodium citrate solution was slowly pipetted into the reaction flask and the combined solution was allowed to boil for approximately one hour. Once the solution had turned an apparent luminescent yellow, the solution was allowed to cool to room temperature. The average diameter of AgNPs in suspension was calorimetrically determined to be 50 nm, as the absorption max was 420nm [@paramelle2014]. AgNPs were mixed with sulfate reducing bacteria (SRB) (Materials and Methods: Biological Sample Preparation). A cell pellet from SRB culture was mixed directly with 10µL of concentrated AgNPs and mixed by gentle pipetting, and spotted onto an aluminum-coated glass slide, and allowed to air-dry prior to Raman spectroscopy.
+
+{need methods here on the Raman parameters used for SERS}
+
+We observed substantial signal enhancement in the fingerprint region on the order of \##### with the addition of AgNPs. We note that the acquisition time and laser power required acquisition of cell spectra using SERS is significantly reduced when compared to normal methodology. We note two key observations that we believe warrant caution when applying SERS methodology to microbial samples.
+
+The first, most crucial for this study, is that we did not observe signal enhancement in the higher wavenumber regions corresponding to the CH and CD band. It is known that the observed SERS spectra is determined by the molecular species in close association to adsorbed AgNPs on the cell surface. We hypothesize that, because AgNPs preferentially nucleate around highly-functionalized molecules such as fused-ring systems, flavins, nucleic acids, etc. [@efrima2009], signal enhancement of C-H bonds is weak or non-existent. Second, we observe that signal enhancement is uneven (a finding noted in prior studies [@efrima2009]) and changes over time. While SERS allows the acquisition of cell spectra in a fraction of the time, it also produces spurious, ephemeral spectral artifacts, including "ghost peaks" that appeared and disappeared, peak position shifts, and graphitization of the cell. We conclude that SERS methodologies, which have been applied to impressive success for purposes of materials characterization, single molecule detection, and molecular characterization, are promising for microbiological characterization. However, more fundamental, mechanistic work is required before it can be robustly applied to environmental systems.
+
+## NanoSIMS dilution factor calculations
+
+Dilution of isotopic signal by sample preparation for nanoSIMS has been widely observed ([@kopf2015; @musat2014; @pernice2015; @stryhanyuk2018; @woebken2015]). Here we define the dilution factor of sample preparation (D) similar to [@meyer2021]:
+
+$$
+D = \frac{F_{after} - F_{before}}{F_{added} - F_{before}}
+$$
+
+where F denotes isotope fraction (at. %) of biomass before and after sample preparation, as well as that of the diluent material ($F_{added}$). Here, we take the Raman-derived \$\^2F\$ as the *before* value, the nanoSIMS as the *after* value, and natural abundance hydrogen as the *added* value. Because the natural abundance of deuterium is negligible in comparison to the label strengths used for this study, we set $F_{added} =  0.00015 \%$ (VSMOW). Here we make explicit the assumption that the Raman-derived value, calculated from CD%, is approximate to whole-cell isotopic composition *before* cell washing. In other words, we assume that molecules incorporate deuterium equally towards non-exchangeable C-H bonds (measurable by Raman) as protic sites in cellular biomass (measurable by nanoSIMS).
+
+We calculated uncertainty in dilution factor using standard propagation of uncertainty via partial derivatives, assuming all measurements to be uncorrelated. This uncertainty term is calculated to be:
+
+$$
+\sigma_{D} = \sqrt{
+\left(\frac{1}{F_{added}-F_{before}} \cdot \sigma_{F_{after}}\right)^2 +
+\left(\frac{F_{after}-F_{added}}{(F_{added}-B)^2} \cdot \sigma_{F_{before}}\right)^2 +
+\left(\frac{F_{before}-F_{after}}{(F_{added}-F_{before})^2} \cdot \sigma_{F_{added}}\right)^2
+}
+$$
+
+For future researchers: back-calculation of the isotopic composition of biomass *before* sample preparation can be done by rearrangement of the dilution factor equation, solving for $F_{before}$:
+
+$$
+F_{before} = \frac{F_{after} - (F_{added} \cdot DF)}{1 - DF}
+$$
+
+The propagated uncertainty in this equation is therefore:
+
+$$
+\sigma_{F_{before}} = \sqrt{
+\left( \frac{1}{1-D} \cdot \sigma_{F_{after}}\right)^2 +
+\left( -\frac{D}{1-D} \cdot \sigma_{F_{added}}\right)^2 +
+\left( \frac{F_{after}-F_{added}}{(1-D)^2} \cdot \sigma_D\right)^2
+} 
+$$
+
+## Supplementary Datasets
+
+Dataset S1 (separate file).
+
+Dataset S2 (separate file).
+
+# Supplementary References
+
+.

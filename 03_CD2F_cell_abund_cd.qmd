@@ -1,0 +1,403 @@
+---
+title: "03_cell_abundance"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+# Load packages and sourced functions
+
+```{r}
+library(tidyverse)
+
+source("source/calculate_mu.R")
+source("source/calculate_sigma_mu.R")
+```
+
+Growth rate calculated by:
+$$
+N_t = N_0 (1 + µ)^t
+$$
+Where $N_t$ is cells at time t, $N_0$ is cells at time 0, µ is growth rate, and t is time passed.
+
+Rearrange to:
+
+$$
+µ = \frac{ln(N_t) - ln(N_0)}{t}
+$$
+
+```{r}
+calculate_mu_from_cells <- function(NT, N0, t) {
+  # note that in R, `log` is natural log; log10 is normal log
+  mu <- (log(NT) - log(N0)) / t
+  return(mu)
+}
+```
+
+
+
+# Load, clean, process data
+```{r}
+# Load cell abundance data
+cell_abundance <- readxl::read_excel("data/raman_w_cell_abundance/Thy_20D2O_cellabundance_data.xlsx") |> 
+  rename(dt.hr = Time_in_h,
+         cells.per.ml = Cells_per_mL) |> 
+  mutate(dt.d = dt.hr / 24) |> 
+  # Take average cells per ml at each time point
+  group_by(dt.d) |> 
+  mutate(mean_cells.per.ml = mean(cells.per.ml, na.rm = TRUE)) |> 
+  ungroup()
+  
+
+# Load CD% data for single cells
+thy_20_test_data <- readxl::read_excel("data/raman_w_cell_abundance/thy_20_variable_T.xlsx") |> 
+  mutate(
+    dt.d = dt.hr / 24,
+    mu.d = calculate_mu(
+      a = 1,
+      F2 = `CD%`,
+      F1 = 0,
+      t1 = 0,
+      t2 = dt.d,
+      FL = FL
+      ),
+    mu.hr = calculate_mu(
+      a = 1,
+      F2 = `CD%`,
+      F1 = 0,
+      t1 = 0,
+      t2 = dt.hr,
+      FL = FL
+    ),
+    smu.d = calculate_sigma_mu(
+      a = 1,
+      F2 = `CD%`,
+      F1 = 0,
+      t1 = 0,
+      t2 = dt.d,
+      FL = FL,
+      sigma_F2 = 2.5 # se of Raman = 2.5 at %
+    ),
+    smu.hr = calculate_sigma_mu(
+      a = 1,
+      F2 = `CD%`,
+      F1 = 0,
+      t1 = 0,
+      t2 = dt.hr,
+      FL = FL,
+      sigma_F2 = 2.5 # se of Raman = 2.5 at %
+    )
+  )
+  
+# Load CD% data and average it
+thy_20_av <-  
+  readxl::read_excel("data/raman_w_cell_abundance/thy_20_variable_T.xlsx") |> 
+  mutate(
+    dt.d = dt.hr / 24
+  ) |> 
+  group_by(condition) |> 
+  summarize(
+    FL = mean(FL),
+    dt.hr = mean(dt.hr, na.rm = TRUE),
+    dt.d = mean(dt.d, na.rm = TRUE),
+    mean_cdpc = mean(`CD%`, na.rm = TRUE)
+  ) |> 
+  mutate(
+    mu.d = calculate_mu(
+      a = 1,
+      F2 = mean_cdpc,
+      F1 = 0,
+      t1 = 0,
+      t2 = dt.d,
+      FL = FL
+      ),
+    mu.hr = calculate_mu(
+      a = 1,
+      F2 = mean_cdpc,
+      F1 = 0,
+      t1 = 0,
+      t2 = dt.hr,
+      FL = FL
+    ),
+    smu.d = calculate_sigma_mu(
+      a = 1,
+      F2 = mean_cdpc,
+      F1 = 0,
+      t1 = 0,
+      t2 = dt.d,
+      FL = FL,
+      sigma_F2 = 2.5 # se of Raman = 2.5 at %
+    ),
+    smu.hr = calculate_sigma_mu(
+      a = 1,
+      F2 = mean_cdpc,
+      F1 = 0,
+      t1 = 0,
+      t2 = dt.hr,
+      FL = FL,
+      sigma_F2 = 2.5 # se of Raman = 2.5 at %
+    )
+  )
+```
+
+# calculate growth rate of cell abundance data
+
+```{r}
+mean_n0_cells <- cell_abundance |> 
+  filter(dt.hr == 0) |> 
+  distinct(mean_cells.per.ml) |> 
+  pull()
+
+cell_abundance_w_mu <- cell_abundance |>
+  mutate(
+    mu.d = calculate_mu_from_cells(
+      NT = mean_cells.per.ml,
+      N0 = mean_n0_cells,
+      t = dt.d
+    ),
+    mu.hr = calculate_mu_from_cells(
+      NT = mean_cells.per.ml,
+      N0 = mean_n0_cells,
+      t = dt.hr
+    )
+  )
+  
+```
+
+# calculate growth rate w/ only exponential part of curve
+
+```{r}
+mean_n0_cells_exp <- cell_abundance |> 
+  filter(dt.hr == 17) |> 
+  distinct(mean_cells.per.ml) |> 
+  pull()
+
+cell_abundance_w_mu_exp <- cell_abundance |>
+  filter(dt.hr == 41) |> 
+  mutate(
+    mu.d = calculate_mu_from_cells(
+      NT = mean_cells.per.ml,
+      N0 = mean_n0_cells_exp,
+      t = 17
+    ),
+    mu.hr = calculate_mu_from_cells(
+      NT = mean_cells.per.ml,
+      N0 = mean_n0_cells_exp,
+      t = 17
+    )
+  )
+```
+
+# calculate growth rate at each stage of the curve
+
+```{r}
+cell_abundance_w_mu_seg <- cell_abundance |>
+  mutate(
+    cells_at_last_t = dplyr::case_match(
+      dt.hr,
+      0 ~ NA,
+      17 ~ 11989111,
+      24 ~ 12925063,
+      41 ~ 25036739,
+      48 ~ 2578781684,
+      65 ~ 4876853683,
+      72 ~ 4866791160
+    ),
+    hr.last = dplyr::case_match(
+      dt.hr,
+      0 ~ NA,
+      17 ~ 0,
+      24 ~ 17,
+      41 ~ 24,
+      48 ~ 41,
+      65 ~ 48,
+      72 ~ 65
+      ),
+    change_hr_since_last = dt.hr - hr.last
+  ) |> 
+  mutate(
+    mu.d = calculate_mu_from_cells(
+      NT = mean_cells.per.ml,
+      N0 = cells_at_last_t,
+      t = change_hr_since_last
+    ),
+    mu.hr = calculate_mu_from_cells(
+      NT = mean_cells.per.ml,
+      N0 = cells_at_last_t,
+      t = change_hr_since_last
+    )
+  )
+```
+
+
+# Exploratory plots
+
+## CD% over time
+```{r}
+thy_20_test_data |> 
+  ggplot() +
+  aes(
+    x = dt.hr,
+    y = `CD%`
+  ) +
+  geom_point() +
+  geom_hline(yintercept = 20, color = "orange") +
+  scale_x_continuous(breaks = c(0, 10, 20, 30, 40, 50)) +
+  coord_cartesian(xlim = c(0,50)) +
+  theme_classic()
+```
+
+## Growth rate from exponential phase marked
+```{r}
+thy_20_test_data |> 
+  ggplot() +
+  aes(
+    x = cell,
+    y = mu.hr
+  ) +
+  geom_hline(
+    color = "orange",
+    yintercept = pull(filter(cell_abundance_w_mu_exp, dt.hr != 0),),
+    size = 3
+  ) +
+  geom_point(aes(color = "CD%")) +
+  geom_errorbar(
+    aes( 
+      ymin = mu.hr - (0.5 * smu.hr),
+      ymax = mu.hr + (0.5 * smu.hr)
+      ),
+    width = 1
+  ) +
+  facet_wrap(vars(paste0(dt.hr, " hrs"))) +
+  scale_color_manual(values = c("black", "orange")) +
+  labs(
+    x = "Cell Number",
+    y = latex2exp::TeX("Growth rate: µ $(hr^{-1})$"),
+    color = "Estimation Method",
+    title = "Growth Rate from Exponential Phase"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "bottom"
+  )
+```
+
+## growth rate from segments
+```{r}
+thy_20_test_data |> 
+  ggplot() +
+  aes(
+    x = cell,
+    y = mu.hr
+  ) +
+  geom_hline(
+    data = filter(cell_abundance_w_mu_seg, dt.hr != 0),
+    aes(color = "orange",
+        yintercept = mu.hr),
+    size = 3
+  ) +
+  geom_point(aes(color = "CD%")) +
+  geom_errorbar(
+    aes( 
+      ymin = mu.hr - (0.5 * smu.hr),
+      ymax = mu.hr + (0.5 * smu.hr)
+      ),
+    width = 1
+  ) +
+  facet_wrap(vars(paste0(dt.hr, " hrs"))) +
+  scale_color_manual(values = c("black", "orange")) +
+  labs(
+    x = "Cell Number",
+    y = latex2exp::TeX("Growth rate: µ $(hr^{-1})$"),
+    color = "Estimation Method",
+    title = "Growth Rate from Segment to Segment"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "bottom"
+  )
+```
+
+## Growth rate from t0 to t
+
+```{r}
+thy_20_test_data |> 
+  ggplot() +
+  aes(
+    x = cell,
+    y = mu.hr
+  ) +
+  geom_hline(
+    data = filter(cell_abundance_w_mu, dt.hr != 0),
+    aes(color = "orange",
+        yintercept = mu.hr),
+    size = 3
+  ) +
+  geom_point(aes(color = "CD%")) +
+  geom_errorbar(
+    aes( 
+      ymin = mu.hr - (0.5 * smu.hr),
+      ymax = mu.hr + (0.5 * smu.hr)
+      ),
+    width = 1
+  ) +
+  facet_wrap(vars(paste0(dt.hr, " hrs"))) +
+  scale_color_manual(values = c("black", "orange")) +
+  labs(
+    x = "Cell Number",
+    y = latex2exp::TeX("Growth rate: µ $(hr^{-1})$"),
+    color = "Estimation Method",
+    title = "Growth Rate from Segment to Segment"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "bottom"
+  )
+```
+
+## Growth rate averages vs microscope
+
+```{r}
+thy_20_av |> 
+  ggplot(
+    aes(
+      x = dt.hr,
+      y = mu.hr
+    )
+  ) +
+  geom_point() +
+  geom_hline(
+    data = filter(cell_abundance_w_mu, dt.hr != 0),
+    aes(color = "orange",
+        yintercept = mu.hr),
+    size = 3
+  )
+```
+
+
+## Cell abundance plot
+```{r}
+cell_abundance |> 
+  ggplot(aes(
+    x = dt.hr,
+    y = cells.per.ml
+  )) +
+  geom_point() +
+  scale_y_log10()
+
+```
+
+## µ vs CD%
+```{r}
+thy_20_test_data |> 
+  ggplot() + 
+  aes(
+    x = `CD%`,
+    y = mu.hr,
+    color = as.factor(dt.hr)
+  ) +
+  geom_point() +
+  geom_smooth()
+```
+

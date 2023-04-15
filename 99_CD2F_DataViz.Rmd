@@ -31,19 +31,28 @@ library(ggdist)
 ## Load from cache
 
 ```{r}
-# Co registered datasets
-co_registered <- readRDS("cache/co_registered.RDS")
-co_registered_fit <- readRDS("cache/co_registered_fitted.RDS")
+# Co-registered datasets
+co_registered <- read_rds("cache/co_registered.RDS") # Raw
+co_registered_fit <- read_rds("cache/co_registered_fitted.RDS") # Fitted
+co_registered_summarized <- read_rds("cache/coreg_data_summary.rds") # summarized
+
+# Dilution factor data
+dilution_factors <- read_rds("cache/dilution_factors.rds")
 
 # Area data
-cd_pc_data <- readRDS("cache/cd_pc_data.RDS")
-cd_pc_data_fitted <- readRDS("cache/area_data.RDS")
+cd_pc_data <- read_rds("cache/cd_pc_data.RDS")
+cd_pc_data_fitted <- read_rds("cache/area_data.RDS")
 
 # Fitted xy data
-fit_data <- readRDS("cache/fit_data.RDS")
+fit_data <- read_rds("cache/fit_data.RDS")
 
 # Fitting parameter data
-fitted_xy_data <- readRDS("cache/peak_data_xy.RDS")
+fitted_xy_data <- read_rds("cache/peak_data_xy.RDS")
+
+# LOD and LOQ data
+LOD_LOQ <- readxl::read_excel("data_output/LOD_LOQ_data.xlsx")
+
+
 ```
 
 ## Colors
@@ -64,8 +73,8 @@ p_co_registered <- co_registered %>%
   filter(!is.na(f_l)) %>% 
   # Plot it!
   ggplot(
-    aes(x = at2H_percent_dtc,
-        y = cd_pc_corr,
+    aes(y = at2H_percent_dtc,
+        x = cd_pc_corr,
         #color = as.factor(f_l),
         #group = organism.x,
         #label = cell_id
@@ -74,16 +83,15 @@ p_co_registered <- co_registered %>%
   stat_smooth(
     formula = y ~ x,
     #formula = y ~ splines::bs(x, 3),
-    size = 0.5,
+    linewidth = 1,
     method = 'lm',
     se = TRUE,
     level = .99,
-    color = "#1a9684"
+    color = "red"
   ) +
   geom_point(
-    aes(shape = organism.x),
-    alpha = 0.5,
-    size = 2
+    alpha = 0.9,
+    size = 1
   ) +
   geom_abline(
     slope = 1,
@@ -102,8 +110,8 @@ p_co_registered <- co_registered %>%
     ) +
   theme_bw() +
   labs(
-    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
-    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    y = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    x = latex2exp::TeX("$^2F\\%_{Raman}$"),
     color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$"),
     shape = ""
   ) +
@@ -111,68 +119,6 @@ p_co_registered <- co_registered %>%
     legend.position = "bottom"
   )
 p_co_registered
-```
-
-```{r}
-p_co_registered_fitted <- co_registered_fit %>% 
-  filter(!is.na(f_l)) %>% 
-  # Plot it!
-  ggplot(
-    aes(x = at2H_percent_dtc,
-        y = `CD%`,
-        color = as.factor(f_l),
-        #group = organism,
-        #label = cell_id
-    )
-  ) +
-  stat_smooth(
-    formula = y ~ x,
-    #formula = y ~ splines::bs(x, 3),
-    size = 0.5,
-    method = 'lm',
-    se = TRUE,
-    level = 0.99, # 99% confidence interval
-    color = "#1a9684",
-    fill = "#1a9684"
-  ) +
-  geom_point(
-    aes(shape = organism), 
-    alpha = 1,
-    size = 2.5
-  ) +
-  geom_abline(
-    slope = 1,
-    linetype = "dashed",
-    color = "gray",
-    alpha = 1,
-  ) +
-  facet_wrap(vars(organism), nrow = 2) +
-  coord_cartesian(
-    xlim = c(0,25), 
-    ylim = c(0,45)
-  ) +
-  scale_color_viridis_d(
-    end = 0.9,
-    option = "magma"
-    ) +
-  theme_bw() +
-  labs(
-    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
-    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
-    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$"),
-    shape = "Organism"
-  ) +
-  theme(
-    legend.position = "right"
-  )
-p_co_registered_fitted
-
-cowplot::save_plot(
-  plot = p_co_registered_fitted,
-  filename = "fig_output/co_reg_fit.pdf",
-  base_height = 6,
-  base_width = 6
-  )
 ```
 
 
@@ -261,56 +207,44 @@ p_co_registered2
 ```
 
 
+
+## CD + 2Fbc ~ FL
+
+This plot represents 2F calculated by CD%, 2F calculated by back-calculating true nanoSIMS values using dilution factors (DF), plotted against label strength (FL)
+
 ```{r}
-p_co_registered_fitted2 <- co_registered_fit %>% 
-  filter(!is.na(f_l)) %>% 
-  # Plot it!
+co_registered_summarized_mini <- co_registered_summarized |> 
+  select(f_l, mean_cdpc, sd_cdpc, n)
+
+dilution_factors_mini <- dilution_factors |> 
+  select(f_l, F_before_backcalc, sF_before_backcalc)
+
+co_registered_summarized_mini |> 
+  left_join(dilution_factors_mini, by = "f_l") |> 
+  filter(f_l != 0) |>
+  pivot_longer(cols = c(mean_cdpc, F_before_backcalc), 
+            names_to = "method", 
+            values_to = "2F"
+            ) |> 
+  pivot_longer(
+    cols = c(sd_cdpc, sF_before_backcalc),
+    names_to = "error_type",
+    values_to = "SD"
+  ) |> 
   ggplot(
-    aes(x = at2H_percent_dtc,
-        y = `CD%`,
-        color = as.factor(f_l),
-        #group = organism,
-        label = cell_id
-    )
+    aes(x = f_l,
+        y = `2F`,
+        color = method)
   ) +
-  geom_point(
-    alpha = 0.5,
-    size = 2
+  geom_point() +
+  geom_pointrange(
+    aes(ymin = `2F` - SD,
+        ymax = `2F` + SD,
+        color = error_type)
   ) +
-  geom_abline(
-    slope = 1,
-    linetype = "dashed",
-    color = "gray",
-    alpha = 1,
-  ) +
-  stat_smooth(
-    formula = y ~ x,
-    #formula = y ~ splines::bs(x, 3),
-    size = 0.5,
-    method = 'lm',
-    se = FALSE,
-    color = "red"
-  ) +
-  #facet_wrap(vars(organism)) +
-  coord_cartesian(
-    xlim = c(0,50), 
-    ylim = c(0,50)
-  ) +
-  scale_color_viridis_d(
-    end = 0.9,
-    option = "magma"
-    ) +
-  theme_bw() +
-  labs(
-    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
-    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
-    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$")
-  ) +
-  theme(
-    legend.position = "bottom",
-    ggside.panel.scale = 2
-  )
-p_co_registered_fitted2
+  facet_wrap(vars(error_type)) +
+  theme_bw()
+  
 ```
 
 
@@ -318,35 +252,116 @@ p_co_registered_fitted2
 
 
 ```{r}
-p_cd_fl <- co_registered_fit %>% 
+calculate_lm_from_coreg_CD <- function(dataset, organism_choice) {
+  return(
+    broom::tidy(
+  lm(
+    data = dataset %>% 
+      # filter out f_L 40 and 50 for the model
+      filter(f_l < 40, organism == organism_choice),
+    `CD%`  ~ f_l
+    )
+  ) |> 
+    # Add organism info
+    mutate(organism = organism_choice) |> 
+    select(term, estimate, organism) |> 
+    pivot_wider(names_from = term, values_from = estimate) |> 
+    mutate(
+       # determine sign for y intercept
+      sign = ifelse(`(Intercept)` < 0, "-", "+"),
+      # print out the equation for the line
+      equation = sprintf("y = %.2fx %s %.2f", f_l, sign, abs(`(Intercept)`))
+    )
+  )
+}
+
+cdfl_model_thy <- calculate_lm_from_coreg_CD(
+  dataset = co_registered_fit, 
+  organism_choice = "T. hydrogeniphilus")
+
+cdfl_model_mb <- calculate_lm_from_coreg_CD(
+  dataset = co_registered_fit,
+  organism_choice = "M. NSHQ14"
+)
+
+
+p_cd_fl <- co_registered_summarized %>% 
   filter(!is.na(f_l)) %>% 
   ggplot(
-    aes(x = f_l,
-        y = `CD%`,
-        color = organism
-        )
+    aes(
+      x = f_l,
+      y = mean_cdpc
+      )
   ) +
-  labs(
-    x = latex2exp::TeX("$^2F$ Growth Water"),
-    y = latex2exp::TeX("$^2F_{Raman}$")
-  ) +
-  facet_wrap(
-    vars(organism), 
-    scales = "free") +
+  # 1:1 line
   geom_abline(
     slope = 1,
-    linetype = "dashed",
+    linetype = "dotted",
     color = "gray",
     alpha = 1,
   ) +
-  geom_point(
-    alpha = 0.5,
-    position = position_jitter(width = 2)
+  # LOD
+  # geom_hline(
+  #   yintercept = pull(select(LOD_LOQ, LOD_CD_percent)),
+  #   color = "red",
+  #   linetype = "dashed",
+  #   linewidth = 0.25
+  #     ) +
+  # # LOQ
+  # geom_hline(
+  #   yintercept = pull(select(LOD_LOQ, LOQ_CD_percent)),
+  #   color = "orange",
+  #   linetype = "dashed",
+  #   linewidth = 0.25
+  #     ) +
+  # T. hy linear fit
+  geom_abline(
+    data = cdfl_model_thy,
+    aes(
+      slope = f_l,
+      intercept = `(Intercept)`
+    ),
+    color = "#346beb",
+    linetype = "dashed"
   ) +
-  ggdist::stat_pointinterval(
-    position = position_nudge(x = 0.2),
-    color = "black"
+  # Mb linear fit
+  geom_abline(
+    data = cdfl_model_mb,
+    aes(
+      slope = f_l,
+      intercept = `(Intercept)`
+    ),
+    color = "#346beb",
+    linetype = "dashed"
   ) +
+  geom_point(size = 2) +
+  geom_pointinterval(
+    aes(
+      ymin = mean_cdpc - sd_cdpc,
+      ymax = mean_cdpc + sd_cdpc
+    )
+  ) +
+  # Mb equation
+  geom_label(
+    data = cdfl_model_mb,
+    x = 42, 
+    y = 1,
+    color = "blue",
+    aes(
+      label = equation
+      )
+  ) +
+  # Thy equation
+   geom_label(
+    data = cdfl_model_thy,
+    x = 42, 
+    y = 1,
+    color = "blue",
+    aes(
+      label = equation
+      )
+  ) +
+  facet_wrap(vars(organism), scales = "free") +
   scale_color_manual(values = organism_colors) + 
   scale_x_continuous(
     limits = c(0, 55),
@@ -357,42 +372,141 @@ p_cd_fl <- co_registered_fit %>%
     breaks = c(0, 10, 20, 30, 40, 50)
   ) +
   theme_classic() +
+  labs(
+    x = latex2exp::TeX("Tracer Strength $^2F$ (at. %)"),
+    y = latex2exp::TeX("Biomass Enrichment $^2F$ (at. %)")
+  ) +
   theme(
     legend.position = "NA",
     strip.background = element_blank()
   )
 p_cd_fl
 
-cowplot::save_plot(
-  plot = p_cd_fl,
-  filename = "fig_output/cd_fl.pdf",
-  base_height = 4,
-  base_width = 8
-)
+# cowplot::save_plot(
+#   plot = p_cd_fl,
+#   filename = "fig_output/cd_fl.pdf",
+#   base_height = 4,
+#   base_width = 8
+# )
 ```
 
 ## 2F FL
 
 ```{r}
-p_2f_fl <- co_registered %>% 
+# Define a function to calculate linear models for 2F
+calculate_lm_from_coreg_2F <- function(dataset, organism_choice) {
+  return(
+    broom::tidy(
+  lm(
+    data = dataset %>% 
+      # filter out f_L 40 and 50 for the model
+      filter(f_l < 40, organism == organism_choice),
+    at2H_percent_dtc  ~ f_l
+    )
+  ) |> 
+    # Add organism info
+    mutate(organism = organism_choice) |> 
+    select(term, estimate, organism) |> 
+    pivot_wider(names_from = term, values_from = estimate) |> 
+    mutate(
+       # determine sign for y intercept
+      sign = ifelse(`(Intercept)` < 0, "-", "+"),
+      # print out the equation for the line
+      equation = sprintf("y = %.2fx %s %.2f", f_l, sign, abs(`(Intercept)`))
+    )
+  )
+}
+
+
+# Calculate linear models of nanoSIMS data using function defined above
+nanofl_model_thy <- calculate_lm_from_coreg_2F(
+  dataset = co_registered_fit, 
+  organism_choice = "T. hydrogeniphilus")
+
+nanofl_model_mb <- calculate_lm_from_coreg_2F(
+  dataset = co_registered_fit,
+  organism_choice = "M. NSHQ14"
+)
+
+
+# Plot it
+p_2f_fl <- co_registered_summarized %>% 
   filter(!is.na(f_l)) %>% 
   ggplot(
-    aes(x = f_l,
-        y = at2H_percent,
-        color = organism.x
-        )
+    aes(
+      x = f_l,
+      y = mean_2F
+      )
   ) +
-  facet_wrap(vars(organism.x), scales = "free") +
+  # 1:1 line
   geom_abline(
     slope = 1,
-    linetype = "dashed",
+    linetype = "dotted",
     color = "gray",
     alpha = 1,
   ) +
-  geom_point(
-    alpha = 0.5,
-    position = position_jitter(width = 2)
+  # LOD
+  # geom_hline(
+  #   yintercept = pull(select(LOD_LOQ, LOD_CD_percent)),
+  #   color = "red",
+  #   linetype = "dashed",
+  #   linewidth = 0.25
+  #     ) +
+  # # LOQ
+  # geom_hline(
+  #   yintercept = pull(select(LOD_LOQ, LOQ_CD_percent)),
+  #   color = "orange",
+  #   linetype = "dashed",
+  #   linewidth = 0.25
+  #     ) +
+  # T. hy linear fit
+  geom_abline(
+    data = nanofl_model_thy,
+    aes(
+      slope = f_l,
+      intercept = `(Intercept)`
+    ),
+    color = "#346beb",
+    linetype = "dashed"
   ) +
+  # Mb linear fit
+  geom_abline(
+    data = nanofl_model_mb,
+    aes(
+      slope = f_l,
+      intercept = `(Intercept)`
+    ),
+    color = "#346beb",
+    linetype = "dashed"
+  ) +
+  geom_point(size = 2.5) +
+  geom_pointinterval(
+    aes(
+      ymin = mean_2F - sd_2F,
+      ymax = mean_2F + sd_2F
+    )
+  ) +
+  # Mb equation
+  geom_label(
+    data = nanofl_model_mb,
+    x = 42, 
+    y = 1,
+    color = "blue",
+    aes(
+      label = equation
+      )
+  ) +
+  # Thy equation
+   geom_label(
+    data = nanofl_model_thy,
+    x = 42, 
+    y = 1,
+    color = "blue",
+    aes(
+      label = equation
+      )
+  ) +
+  facet_wrap(vars(organism), scales = "free") +
   scale_color_manual(values = organism_colors) + 
   scale_x_continuous(
     limits = c(0, 55),
@@ -402,36 +516,32 @@ p_2f_fl <- co_registered %>%
     limits = c(0, 55),
     breaks = c(0, 10, 20, 30, 40, 50)
   ) +
-  labs(
-    x = latex2exp::TeX("$^2F$ Growth Water"),
-    y = latex2exp::TeX("$^2F_{nanoSIMS}$")
-  ) +
-  ggdist::stat_pointinterval(
-    position = position_nudge(x = 0.2),
-    color = "black"
-  ) +
   theme_classic() +
+  labs(
+    x = latex2exp::TeX("Tracer Strength $^2F$ (at. %)"),
+    y = latex2exp::TeX("Biomass Enrichment $^2F$ (at. %)")
+  ) +
   theme(
     legend.position = "NA",
     strip.background = element_blank()
   )
 p_2f_fl
-
-cowplot::save_plot(
-  plot = p_2f_fl,
-  filename = "fig_output/2f_fl.pdf",
-  base_height = 4,
-  base_width = 8
-)
 ```
 
 ## Cowplot: CD-FL and 2F-FL
 
 ```{r}
-cowplot::plot_grid(
+figure_1 <- cowplot::plot_grid(
   p_cd_fl,
   p_2f_fl,
   ncol = 1
+)
+
+cowplot::save_plot(
+  filename = "fig_output/figure1.pdf",
+  figure_1,
+  base_height = 6,
+  base_width = 6
 )
 ```
 

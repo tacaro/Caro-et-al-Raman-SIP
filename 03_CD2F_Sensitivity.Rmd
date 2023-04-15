@@ -9,15 +9,17 @@ editor_options:
 
 # Setup
 
+## Clear ENV
+```{r}
+rm(list=ls())
+```
+
 ## Libraries
 
 ```{r}
 library(tidyverse)
-library(tidyverse)
-library(glmnet)
-library(rstanarm)
-library(boot)
 library(geomtextpath)
+library(plotly)
 ```
 
 ## Functions
@@ -57,7 +59,7 @@ test_dataset <- tibble(
   sigma_a = 0, # no uncertainty in alpha because defined cultures
   sigma_FL = 0, # uncertainty in FL is unknown: determine with pipetting?
   sigma_F1 = 0, # at%: approx as zero because 2H natabund is negligible
-  sigma_F2 = 2.5 # at%: RMSE of proxy
+  sigma_F2 = 3 # at%: RMSE of proxy
   ) %>% 
   crossing(
   FL = c(5, 10, 15, 20, 25, 30, 35, 40, 45, 50),
@@ -83,149 +85,37 @@ test_dataset <- tibble(
 ```
 
 
-Generate a plot for multiple incubation times
+
+### Define plotting function
 
 ```{r}
-test_dataset %>% 
-  ggplot() +
-  aes(
-    x = TD.days,
-    y = rel_error,
-    color = as.factor(FL)
-    ) +
-  geom_line() +
-  scale_color_viridis_d(begin = 0.1, end = 0.9) +
-  scale_y_continuous(labels = scales::percent) + 
-  coord_cartesian(
-    ylim = c(0, 0.5),
-    xlim = c(0, 500)
-    ) +
-  #scale_x_log10() +
-  facet_wrap(vars(as.factor(dt)), scales = "free_x") +
-  theme_bw()
-```
-
-Generate a plot for 30 day incubation time
-```{r}
-
-p_30_day_sens <- test_dataset %>%
-  filter(dt == 30) |> 
-  ggplot() +
-  aes(
-    x = TD.days,
-    y = rel_error,
-    color = as.factor(FL)
-    ) +
-  geom_line() +
-  scale_color_viridis_d(begin = 0.1, end = 0.9) +
-  scale_y_continuous(labels = scales::percent) + 
-  coord_cartesian(
-    ylim = c(0, 0.5),
-    xlim = c(0, 200)
-    ) +
-  #scale_x_log10() +
-  #facet_wrap(vars(as.factor(dt)), scales = "free_x") +
-  labs(
-    x = "Generation Time (Days)",
-    y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
-    color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
-    caption = "Raman 2H-SIP sensitivity range for 30 day incubation"
-  ) +
-  theme_bw() +
-  theme(
-    legend.position = "bottom"
-  )
-p_30_day_sens
-
-cowplot::save_plot(
-  filename = "fig_output/p_30_day_sens.pdf", 
-  plot = p_30_day_sens,
-  base_height = 8,
-  base_width = 8
-  )
-
-```
-
-Generate a plot for 60 day incubation time
-```{r}
-# upper_lim <- test_dataset |> 
-#     filter(dt == 60) |> 
-#     filter(rel_error <= 0.5) |>
-#     filter(FL == 50) |> 
-#     pull(TD.days) |> 
-#     min()
-#   
-#   lower_lim <- test_dataset |> 
-#     filter(dt == d_t) |> 
-#     filter(rel_error <= 0.5) |>
-#     filter(FL == 50) |> 
-#     pull(TD.days) |> 
-#     max()
-
-p_60_day_sens <- test_dataset %>%
-  filter(dt == 60) |> 
-  ggplot() +
-  aes(
-    x = TD.days,
-    y = rel_error,
-    color = as.factor(FL)
-    ) +
-  geom_line() +
-  scale_color_viridis_d(begin = 0.1, end = 0.9) +
-  scale_y_continuous(labels = scales::percent) + 
-  coord_cartesian(
-    ylim = c(0, 0.5),
-    xlim = c(0, 400)
-    ) +
-  #scale_x_log10() +
-  #facet_wrap(vars(as.factor(dt)), scales = "free_x") +
-  labs(
-    x = "Generation Time (Days)",
-    #y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
-    #color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
-    caption = "Raman 2H-SIP sensitivity range for 60 day incubation"
-  ) +
-  theme_bw() +
-  theme(
-    legend.position = "bottom"
-  )
-p_60_day_sens
-
-
-```
-
-```{r}
-# upper_lim <- test_dataset |> 
-#   filter(dt == 30) |> 
-#   filter(rel_error <= 0.5) |>
-#   filter(FL == 50) |> 
-#   pull(TD.days) |> 
-#   min()
-# 
-# lower_lim <- test_dataset |> 
-#     filter(dt == 30) |> 
-#     filter(rel_error <= 0.5) |>
-#     filter(FL == 50) |> 
-#     pull(TD.days) |> 
-#     max()
-```
-
-
-### Use a function to generate multiple plots with correct axes:
-```{r}
-plot_rel_error <- function(d_t, xlimits, include_legend = TRUE) {
+plot_rel_error <- function(test_dataset, d_t, f_label, xlimits, include_legend = TRUE, include_caption = TRUE) {
   upper_lim <- test_dataset |> 
     filter(dt == d_t) |> 
     filter(rel_error <= 0.5) |>
-    filter(FL == 20) |> 
+    filter(FL == f_label) |> 
     pull(TD.days) |> 
+    min()
+  
+  upper_lim_mu_d <- test_dataset |> 
+    filter(dt == d_t) |> 
+    filter(rel_error <= 0.5) |>
+    filter(FL == f_label) |> 
+    pull(mu.d) |> 
     min()
   
   lower_lim <- test_dataset |> 
     filter(dt == d_t) |> 
     filter(rel_error <= 0.5) |>
-    filter(FL == 20) |> 
+    filter(FL == f_label) |> 
     pull(TD.days) |> 
+    max()
+  
+  lower_lim_mu_d <- test_dataset |> 
+    filter(dt == d_t) |> 
+    filter(rel_error <= 0.5) |>
+    filter(FL == f_label) |> 
+    pull(mu.d) |> 
     max()
   
   test_dataset %>%
@@ -237,7 +127,7 @@ plot_rel_error <- function(d_t, xlimits, include_legend = TRUE) {
       x = TD.days,
       y = rel_error,
       color = as.factor(FL)
-      ) +
+    ) +
     annotate(geom = "segment", x = lower_lim, xend = lower_lim, y = 0, yend = 0.5, color = "gray") +
     annotate(geom = "segment", x = upper_lim, xend = upper_lim, y = 0, yend = 0.5, color = "gray") +
     #annotate(geom = "label", x = upper_lim, y = 0.1, color = "black", label = paste0(round(upper_lim, 1), " d")) +
@@ -248,8 +138,8 @@ plot_rel_error <- function(d_t, xlimits, include_legend = TRUE) {
     scale_x_continuous(
       sec.axis = dup_axis(
         breaks = c(round(upper_lim, 1), round(lower_lim, 1))
-        )
-      ) +
+      )
+    ) +
     # Secondary axis with growth rate:
     # scale_x_continuous(
     #   sec.axis = sec_axis(~ log(2)/., breaks = c(0.1, 0.01, 0.002)),
@@ -260,12 +150,18 @@ plot_rel_error <- function(d_t, xlimits, include_legend = TRUE) {
       ylim = c(0, 0.5),
       xlim = xlimits,
       expand = FALSE
-      ) +
+    ) +
     labs(
       x = "Generation Time (Days)",
       y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
       color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
-      title = paste(d_t, "day")
+      title = paste(d_t, "day incubation time"),
+      caption = if_else(include_caption, paste(
+        "Quantification of growth: \n",
+        "Generation times: between", round(upper_lim, 1), "and", round(lower_lim, 1), "days, \n",
+        "Growth rate: between", round(lower_lim_mu_d, 3), "and", round(upper_lim_mu_d, 3), "days ^-1"
+        ),
+        "")
     ) +
     theme_classic() +
     theme(
@@ -277,24 +173,61 @@ plot_rel_error <- function(d_t, xlimits, include_legend = TRUE) {
     )
 }
  
-plot_rel_error(100, c(0, 650), FALSE)
+# TEST THE FUNCTION
+plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 30,
+  xlimits = c(0,160),
+  f_label = 30,
+  include_legend = TRUE,
+  include_caption = TRUE
+)
 ```
 
-## Plot Rel Error across inc times
+## Plot Rel Error Vs. Generation Time
 
 ```{r}
 #dt = c(1, 5, 7, 30, 60, 100),
 
 # get the legend
-rel_error_legend <- cowplot::get_legend(plot_rel_error(1, c(0, 7), TRUE))
+rel_error_legend <- cowplot::get_legend(plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 1,
+  xlimits = c(0,600),
+  f_label = 30,
+  include_legend = TRUE))
 
 rel_error_grid <- cowplot::plot_grid(
-  plot_rel_error(1, c(0, 50), FALSE),
-  plot_rel_error(5, c(0, 50), FALSE),
-  plot_rel_error(7, c(0, 50), FALSE),
-  plot_rel_error(30, c(0, 650), FALSE),
-  plot_rel_error(60, c(0, 650), FALSE),
-  plot_rel_error(100, c(0, 650), FALSE),
+  plot_rel_error(test_dataset = test_dataset,
+                 d_t = 1,
+                 xlimits = c(0,50),
+                 f_label = 30,
+                 include_legend = FALSE, include_caption = FALSE),
+  plot_rel_error(test_dataset = test_dataset,
+                 d_t = 5,
+                 xlimits = c(0,50),
+                 f_label = 30,
+                 include_legend = FALSE, include_caption = FALSE),
+  plot_rel_error(test_dataset = test_dataset,
+                 d_t = 10,
+                 xlimits = c(0,50),
+                 f_label = 30,
+                 include_legend = FALSE, include_caption = FALSE),
+  plot_rel_error(test_dataset = test_dataset,
+                 d_t = 30,
+                 xlimits = c(0,600),
+                 f_label = 30,
+                 include_legend = FALSE, include_caption = FALSE),
+  plot_rel_error(test_dataset = test_dataset,
+                 d_t = 60,
+                 xlimits = c(0,600),
+                 f_label = 30,
+                 include_legend = FALSE, include_caption = FALSE),
+  plot_rel_error(test_dataset = test_dataset,
+                 d_t = 100,
+                 xlimits = c(0,600),
+                 f_label = 30,
+                 include_legend = FALSE, include_caption = FALSE),
   ncol = 2,
   byrow = FALSE
 )
@@ -320,7 +253,137 @@ rel_error_grid_w_legend
 ```
 
 
-Assess multiple sources of uncertainty
+## Plot Rel Error vs. 2F
+
+```{r}
+plot_rel_error_at2H <- function(test_dataset, d_t, f_label, xlimits, include_legend = TRUE, include_caption = TRUE) {
+  upper_lim <- test_dataset |> 
+    filter(dt == d_t) |> 
+    filter(rel_error <= 0.5) |>
+    filter(FL == f_label) |> 
+    pull(F2) |> 
+    min()
+  
+  upper_lim_mu_d <- test_dataset |> 
+    filter(dt == d_t) |> 
+    filter(rel_error <= 0.5) |>
+    filter(FL == f_label) |> 
+    pull(mu.d) |> 
+    min()
+  
+  lower_lim <- test_dataset |> 
+    filter(dt == d_t) |> 
+    filter(rel_error <= 0.5) |>
+    filter(FL == f_label) |> 
+    pull(F2) |> 
+    max()
+  
+  lower_lim_mu_d <- test_dataset |> 
+    filter(dt == d_t) |> 
+    filter(rel_error <= 0.5) |>
+    filter(FL == f_label) |> 
+    pull(mu.d) |> 
+    max()
+
+  
+  test_dataset %>%
+    # Argument input here to filter dataset to correct incubation time:
+    filter(dt == d_t) |> 
+    filter(FL > 15) |> 
+    ggplot() +
+    aes(
+      x = F2,
+      y = rel_error,
+      color = as.factor(FL)
+    ) +
+    annotate(geom = "segment", x = lower_lim, xend = lower_lim, y = 0, yend = 0.5, color = "gray") +
+    annotate(geom = "segment", x = upper_lim, xend = upper_lim, y = 0, yend = 0.5, color = "gray") +
+    #annotate(geom = "label", x = upper_lim, y = 0.1, color = "black", label = paste0(round(upper_lim, 1), " d")) +
+    #annotate(geom = "label", x = lower_lim, y = 0.1, color = "black", label = paste0(round(lower_lim, 1), " d")) +
+    geom_line(linewidth = 1) +
+    scale_color_viridis_d(end = 0.9) +
+    # Secondary axis with ticks marked
+    scale_x_continuous(
+      sec.axis = dup_axis(
+        breaks = c(round(upper_lim, 1), round(lower_lim, 1))
+      )
+    ) +
+    # Secondary axis with growth rate:
+    # scale_x_continuous(
+    #   sec.axis = sec_axis(~ log(2)/., breaks = c(0.1, 0.01, 0.002)),
+    #   
+    #   ) +
+    scale_y_continuous(labels = scales::percent) + 
+    coord_cartesian(
+      ylim = c(0, 0.5),
+      xlim = xlimits,
+      expand = FALSE
+    ) +
+    labs(
+      x = latex2exp::TeX("$^2F$ (at. %)"),
+      y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
+      color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
+      title = paste(d_t, "day incubation time"),
+      caption = if_else(include_caption, paste(
+        "Range of quantification: \n",
+        "CD% values: ", round(upper_lim, 1), "-", round(lower_lim, 1), "%, \n",
+        "Growth rate: ", round(lower_lim_mu_d, 3), "-", round(upper_lim_mu_d, 3), "days^-1"
+        ),
+        "")
+    ) +
+    theme_classic() +
+    theme(
+      legend.position = if_else(include_legend, "bottom", "NA"),
+      axis.text.x.top = element_text(angle = 45, hjust = 0),
+      axis.title.x.top = element_blank(),
+      #panel.border = element_rect(color = "black", size = 2, fill = NA),
+      #axis.ticks = element_line(linewidth = 1)
+    )
+}
+ 
+
+```
+
+# Generate Nice Plots
+```{r}
+
+
+panel_a <- plot_rel_error_at2H(
+  test_dataset = test_dataset,
+  d_t = 30,
+  xlimits = c(0,50),
+  f_label = 30,
+  include_legend = TRUE,
+  include_caption = TRUE
+)
+
+panel_b <-plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 30,
+  xlimits = c(0,160),
+  f_label = 30,
+  include_legend = TRUE,
+  include_caption = TRUE
+)
+
+combined <- cowplot::plot_grid(
+  panel_a,
+  panel_b,
+  ncol = 2
+)
+
+cowplot::save_plot(
+  plot = combined,
+  filename = "fig_output/figure2.pdf",
+  base_height = 6,
+  base_width = 10
+)
+ 
+```
+
+
+
+# Assess multiple sources of uncertainty
 ```{r}
 
 # error matrix
@@ -436,5 +499,102 @@ cowplot::save_plot(
   base_height = 5,
   base_width = 5
 )
+```
+
+
+# Plotly
+
+```{r}
+plotly_rel_error_at2H <- function(test_dataset, d_t, xlimits = c(0, 50)) {
+  
+  plot <- test_dataset %>%
+    # Argument input here to filter dataset to correct incubation time:
+    filter(dt == d_t) |> 
+    filter(FL > 15) |> 
+    ggplot() +
+    aes(
+      x = F2,
+      y = rel_error,
+      color = as.factor(FL)
+    ) +
+    geom_line(linewidth = 1) +
+    geom_hline(yintercept = 0.5, linetype = "dotted") +
+    scale_color_viridis_d(end = 0.9) +
+    # Set axis labels here. Labs will cause it to crash.
+    scale_x_continuous(name = "Biomass (D at. %)") +
+    scale_y_continuous(name = "Relative Error", labels = scales::percent) + 
+    coord_cartesian(
+      ylim = c(0, 0.5),
+      xlim = xlimits,
+      expand = FALSE
+    ) +
+    labs(
+      title = paste(d_t, "day incubation time"),
+    ) +
+    theme_bw() +
+    theme(
+      legend.title = element_text("Tracer Strength (D at. %)")
+    )
+  ggplotly(plot) |> 
+    layout(
+    xaxis = list(
+      title = TeX("^2F_{Biomass}")),
+    yaxis = list(
+      title = TeX("\\text{Relative Error } \\left(\\frac{\\sigma_{\\mu}}{\\mu} \\right)")),
+    legend = list(
+      title = list(text = TeX("^2F_{Tracer}")))
+    ) |> 
+    config(.Last.value, mathjax = 'cdn')
+}
+
+
+plotly_rel_error_at2H(test_dataset = test_dataset, d_t = 30)
+
+```
+
+```{r}
+plotly_rel_error <- function(test_dataset, d_t, f_label, xlimits, include_legend = TRUE) {
+  
+  plot <- test_dataset %>%
+    # Argument input here to filter dataset to correct incubation time:
+    filter(dt == d_t) |> 
+    filter(FL > 15) |> 
+    ggplot() +
+    aes(
+      x = TD.days,
+      y = rel_error,
+      color = as.factor(FL)
+    ) +
+    geom_line(linewidth = 1) +
+    geom_hline(yintercept = 0.5, linetype = "dotted") +
+    scale_color_viridis_d(option = "plasma", begin = 0.1, end = 0.9) +
+    # Secondary axis with ticks marked
+    scale_x_continuous() +
+    scale_y_continuous(labels = scales::percent) + 
+    coord_cartesian(
+      ylim = c(0, 0.5),
+      xlim = xlimits,
+      expand = FALSE
+    ) +
+    labs(
+      color = "Tracer Strength (D at. %)",
+      title = paste(d_t, "day incubation time"),
+    ) +
+    theme_classic() +
+    theme()
+  
+  ggplotly(plot) |> 
+    layout(
+    xaxis = list(
+      title = TeX("^2F_{Biomass}")),
+    yaxis = list(
+      title = TeX("\\text{Relative Error } \\left(\\frac{\\sigma_{\\mu}}{\\mu} \\right)")),
+    legend = list(
+      title = list(text = TeX("^2F_{Tracer}")))
+    ) |> 
+    config(.Last.value, mathjax = 'cdn')
+}
+
+plotly_rel_error(test_dataset = test_dataset, d_t = 30, f_label = 30, xlimits = c(0, 300))
 ```
 
