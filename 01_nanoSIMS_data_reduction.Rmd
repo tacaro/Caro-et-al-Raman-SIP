@@ -7,6 +7,12 @@ editor_options:
   chunk_output_type: console
 ---
 
+## Clear the environment
+
+```{r}
+rm(list=ls())
+```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -135,12 +141,12 @@ roi_data2 <- roi_data %>%
   mutate(
     organism = case_when(
       str_detect(filename, "Thy") ~ "T. hydrogeniphilus",
-      str_detect(filename, "Mb") ~ "M. NSHQ14"
+      str_detect(filename, "Mb") ~ "M. NSHQ04"
       ),
     # some quick label strength
     label_at2H = case_when(
       organism == "T. hydrogeniphilus" ~ as.numeric(str_sub(filename, start = 5, end = 6)),
-      organism == "M. NSHQ14" ~ as.numeric(str_sub(filename, start = 4, end = 5)),
+      organism == "M. NSHQ04" ~ as.numeric(str_sub(filename, start = 4, end = 5)),
     )
   ) %>% 
   # Parse the nanoSIMS_file_id

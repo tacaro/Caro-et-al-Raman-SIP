@@ -1,0 +1,147 @@
+---
+title: "BrownFinalDeliverable"
+author: "George Brown"
+date: '2023-05-16'
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(knitr)
+library(boot)
+
+# file path will differ
+correlated_dataset <- read_rds("cache/correlated_dataset.RDS")
+head(correlated_dataset)
+```
+
+```{r}
+names(correlated_dataset)[5] <- "CD"
+head(correlated_dataset)
+```
+
+# Histograms of Variables
+
+```{r}
+hist(correlated_dataset$CD)
+hist(correlated_dataset$at2H_percent_dtc)
+```
+
+# Dataframes for Individual Cells
+
+```{r}
+df.Thydro <- subset(correlated_dataset, organism == "T. hydrogeniphilus")
+df.MNSHQ14 <- subset(correlated_dataset, organism == "M. NSHQ14")
+```
+
+# Regression - all data, individual cell types
+
+```{r}
+#Simple linear model with all data included
+linear.fit <- lm(at2H_percent_dtc ~ CD, data = correlated_dataset)
+summary(linear.fit)
+
+#T.hydro
+hydro.fit <- lm(at2H_percent_dtc ~ CD, data = df.Thydro)
+summary(hydro.fit)
+
+#MNSHQ14
+mnshq14.fit <- lm(at2H_percent_dtc ~ CD, data = df.MNSHQ14)
+summary(mnshq14.fit)
+```
+
+# Form Train and Test
+
+```{r}
+# set seed for reproducible results
+set.seed(1)
+train = sample(c(TRUE,FALSE),nrow(correlated_dataset),rep=TRUE) #randomly choose
+test = (!train) #anything not in train
+
+train.geo <- correlated_dataset[train,]
+test.geo <- correlated_dataset[test,]
+
+nrow(train.geo)  
+nrow(test.geo)
+```
+
+# Model Diagnostics Plot - Simple Linear Regression, All Data
+
+```{r}
+par(mfrow=c(2,2))
+plot(linear.fit)
+```
+
+# Only T.hhydro
+
+```{r}
+par(mfrow=c(2,2))
+plot(hydro.fit)
+```
+
+# Only MNSHQ14
+
+```{r}
+par(mfrow=c(2,2))
+plot(mnshq14.fit)
+```
+
+# Tables
+
+```{r}
+#all data
+reg.table <- coef(summary(linear.fit)) 
+kable(reg.table, caption = "Inferential statistics for the linear
+      regression model: at2H and CD")  #doing inferential statistics on the model
+
+#T.hydro
+reg.table2 <- coef(summary(hydro.fit)) 
+kable(reg.table2, caption = "Inferential statistics for the linear
+      regression model: at2H and CD")  #doing inferential statistics on the model
+
+#MNSHQ14
+reg.table3 <- coef(summary(mnshq14.fit)) 
+kable(reg.table3, caption = "Inferential statistics for the linear
+      regression model: at2H and CD")  #doing inferential statistics on the model
+```
+
+# Cross Validation - Test Error
+
+```{r}
+set.seed(1)
+
+#lm
+linear.fit.train = lm(at2H_percent_dtc~CD, data=train.geo)
+lm.pred.geo = predict(linear.fit.train, test.geo, type="response")
+linear.mse <- mean((test.geo$at2H_percent_dtc - lm.pred.geo)^2) #mean squared error
+linear.rmse <- sqrt(linear.mse)
+#MSE: residual squared (difference between actual and predicted)
+linear.mse
+linear.rmse
+```
+
+# Bootstrapping - Confidence Intervals for Parameters
+
+```{r}
+B <- 1000    # amount of repeated bootstrap sampling
+boot.beta0 <- NULL #empty vector
+boot.beta1 <- NULL #empty vector
+
+## bootstrap regression models using for-loop
+vec.id <- 1:length(correlated_dataset$at2H_percent_dtc)   # vector of observation ID
+for(i in 1:B){            #creating the for loop to bootstrap cases
+  boot.id <- sample(vec.id, length(correlated_dataset$at2H_percent_dtc), replace = TRUE)   #sampling vector 
+  boot.at2H <- correlated_dataset$at2H_percent_dtc[boot.id]           # bootstrap at2H
+  boot.CD <- correlated_dataset$CD[boot.id]     # bootstrap CD
+
+  boot.reg <-lm(correlated_dataset$at2H_percent_dtc[boot.id] ~ correlated_dataset$CD[boot.id]) #bootstrap regression
+  boot.beta0[i] <- coef(boot.reg)[1]   # bootstrap intercept
+  boot.beta1[i] <- coef(boot.reg)[2]   # bootstrap slope
+}
+
+boot.beta0.ci <- quantile(boot.beta0, c(0.025, 0.975), type = 2) #bootstrap CI for intercept
+boot.beta1.ci <- quantile(boot.beta1, c(0.025, 0.975), type = 2) #bootstrap CI for slope
+boot.coef <- data.frame(rbind(boot.beta0.ci, boot.beta1.ci))  #creating a data frame of bootstrap CI
+names(boot.coef) <- c("2.5%", "97.5%") 
+kable(boot.coef, caption="Bootstrap confidence intervals of regression coefficients.") #creating table of bootstrap coefficients
+```

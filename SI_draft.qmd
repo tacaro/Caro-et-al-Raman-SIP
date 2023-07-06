@@ -26,18 +26,11 @@ Tristan A. Caro$^1$, Srishti Kashyap$^1$, George Brown$^2$, Claudia Chen$^2$, Se
 
 # Supplementary Text
 
-## Level of Detection and Quantification
+## Correlation between Raman and nanoSIMS measurements
 
-Level of detection (LOD) and level of quantification (LOQ) are quantified according to [@macdougall1980]:
+### Figure S1
 
-$$
-\begin{aligned}
-S_{LOQ} &= S_{mb} + 10\sigma_{mb} \\
-S_{LOD} &= S_{mb} + 3\sigma_{mb}
-\end{aligned}
-$$
-
-Where $S_{LOQ}$ is signal limit of quantification, Smb is the signal of the method blank, σmb is the standard deviation of the method blank, and $S_{LOD}$ is the signal limit of detection. In this work, we use σmb equal to the standard deviation of cell deuterium abundance $^2F_{biomass}$ measured in the natural abundance control ($^2F_{label} = 0\%$).
+![Correlation of cellular enrichment measured by both Raman spectroscopy and nanoSIMS.](fig_output/figS1.png){fig-align="center"}
 
 ## Growth rate error propagation
 
@@ -47,7 +40,7 @@ $$
 \mu = - \frac{1}{t}ln (\frac{F_T - a \cdot F_L}{F_0 - a \cdot F_L})
 $$
 
-We propagated error of individual parameters according to (REF Caro et al. 2023) to uncertainty in growth rate using standard propagation of uncertainty via partial derivatives, assuming all measurements to be uncorrelated ####FIX:
+We propagated error of individual parameters according to [@caro2023] to uncertainty in growth rate using standard propagation of uncertainty via partial derivatives, assuming all measurements to be uncorrelated ####FIX:
 
 $$
 \sigma_{\mu} = \frac{
@@ -80,7 +73,7 @@ $$
 D = \frac{F_{after} - F_{before}}{F_{added} - F_{before}}
 $$
 
-where F denotes isotope fraction (at. %) of biomass before and after sample preparation, as well as that of the diluent material ($F_{added}$). Here, we take the Raman-derived \$\^2F\$ as the *before* value, the nanoSIMS as the *after* value, and natural abundance hydrogen as the *added* value. Because the natural abundance of deuterium is negligible in comparison to the label strengths used for this study, we set $F_{added} =  0.00015 \%$ (VSMOW). Here we make explicit the assumption that the Raman-derived value, calculated from CD%, is approximate to whole-cell isotopic composition *before* cell washing. In other words, we assume that molecules incorporate deuterium equally towards non-exchangeable C-H bonds (measurable by Raman) as protic sites in cellular biomass (measurable by nanoSIMS).
+where F denotes isotope fraction (at. %) of biomass before and after sample preparation, as well as that of the diluent material ($F_{added}$). Here, we take the Raman-derived \$\^2F\$ as the *before* value, the nanoSIMS as the *after* value, and natural abundance hydrogen as the *added* value. Because the natural abundance of deuterium is negligible in comparison to the label strengths used for this study, we set $F_{added} = 0.00015 \%$ (VSMOW). Here we make explicit the assumption that the Raman-derived value, calculated from CD%, is approximate to whole-cell isotopic composition *before* cell washing. In other words, we assume that molecules incorporate deuterium equally towards non-exchangeable C-H bonds (measurable by Raman) as protic sites in cellular biomass (measurable by nanoSIMS).
 
 We calculated uncertainty in dilution factor using standard propagation of uncertainty via partial derivatives, assuming all measurements to be uncorrelated. This uncertainty term is calculated to be:
 
@@ -107,6 +100,16 @@ $$
 \left( \frac{F_{after}-F_{added}}{(1-D)^2} \cdot \sigma_D\right)^2
 } 
 $$
+
+## Effect of dead time correction on nanoSIMS-derived data
+
+We observed a negligible effect of dead time correction (Main Text: Materials and Methods) on deuterium isotopic values. The effects we did observe increased at higher deuterium enrichment. The maximum residual difference between raw and dead-time corrected (DTC) nanoSIMS data was just under 0.05 at. %, with most residuals below 0.03 at. %. Given that our labeling enrichment varied between 0 - 50 at. %, we consider this a negligible effect.
+
+### Figure S2
+
+![](fig_output/dtc_effect.png){fig-align="center"}
+
+\(A\) The difference in $^2F %$ between raw and dead time-corrected (DTC) values. The x-axis is arbitrary as points are ordered by greatest to least difference. (B) The difference in $^2F$ between raw and DTC values as a function of $^2F$ with a linear fit (Red). (C) Raw and DTC values plotted against each other, with a linear fit (red).
 
 ## Supplementary Datasets
 

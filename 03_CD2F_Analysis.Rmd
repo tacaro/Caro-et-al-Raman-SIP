@@ -31,13 +31,24 @@ library(ggdist)
 ## Load from cache
 
 ```{r}
-# Only loading the co-registered dataset using the fitted data
+excluded_cells <- readxl::read_excel("data/other/excluded_cells.xlsx") %>% pull(cell_id)
 
 # Co registered datasets
-co_registered_fit <- readRDS("cache/co_registered_fitted.RDS")
+co_registered_fit <- readRDS("cache/co_registered_fitted.RDS") |> 
+  # Fix methanobacterium name to be M. NSHQ04 (not NSHQ14)
+  mutate(organism = case_when(
+    organism == "M. NSHQ14" ~ "M. NSHQ04", # if incorrect, switch it
+    TRUE ~ organism # else, return original value
+    )
+  )
 
-# Area data
+# Raman data
 cd_pc_data_fitted <- readRDS("cache/area_data.RDS")
+
+# NanoSIMS data
+nanoSIMS_data <- readRDS("cache/roi_data_joined.RDS") |> 
+  # Exclude cells on the excluded cells list
+  filter(!cell_id %in% excluded_cells) 
 
 # Fitted xy data
 fit_data <- readRDS("cache/fit_data.RDS")
@@ -88,7 +99,7 @@ proxy_slope_SRB <- proxy_data_SRB %>%
 
 ```{r}
 proxy_data_Mb <- broom::tidy(lm(
-  data = co_registered_fit %>% filter(organism == "M. NSHQ14"), 
+  data = co_registered_fit %>% filter(organism == "M. NSHQ04"), 
   `CD%`  ~ at2H_percent_dtc))
 proxy_y_int_Mb <- proxy_data_Mb %>% 
   filter(term == "(Intercept)") %>%
@@ -99,80 +110,6 @@ proxy_slope_Mb <- proxy_data_Mb %>%
   filter(term == "at2H_percent_dtc") %>% 
   select(estimate) %>% 
   pull()
-```
-
-# Calculate LOD and LOQ
-
-In order to calculate the signal for limit of quantitation: eq. 4.7.4 [https://chem.libretexts.org/Courses/BethuneCookman_University/B-CU%3A_CH-345_Quantitative_Analysis/Book%3A_Analytical_Chemistry_2.1\_(Harvey)/04%3A_Evaluating_Analytical_Data/4.07%3A_Detection_Limits](https://chem.libretexts.org/Courses/BethuneCookman_University/B-CU%3A_CH-345_Quantitative_Analysis/Book%3A_Analytical_Chemistry_2.1_(Harvey)/04%3A_Evaluating_Analytical_Data/4.07%3A_Detection_Limits){.uri}
-
-The ability to detect the analyte with confidence is not the same as the ability to report with confidence its concentration, or to distinguish between its concentration in two samples. For this reason the American Chemical Society's Committee on Environmental Analytical Chemistry recommends the limit of quantitation, (SA)LOQ:
-
-$(S_A)_{LOQ} = S_{mb} + 10\sigma_{mb}$ Where - $S_{mb}$ is the signal of the method blank - $S_{A}$ is the signal analyte at the $LOQ$ level of quantification - $\sigma_{mb}$ is the standard error of the method blank
-
-Signals $< 3\sigma$ are considered "analyte not detected". Signals between $3\sigma$ and $10\sigma$ are considered detected but not quantifiable "region of detection". Signals $>10\sigma$ are considered within the region of quantification. Therefore, $10\sigma$ is chosen as the *limit of quantification* (LOQ).
-
-Here we calculated both LOD and LOQ as:
-
-$$
-\begin{aligned}
-S_{LOQ} &= S_{mb} + 10\sigma_{mb} \\
-S_{LOD} &= S_{mb} + 3\sigma_{mb}
-\end{aligned}
-$$
-
-```{r}
-# Calculate signal of the method blank (natural abundance sample)
-S_mb_cd <- co_registered_fit |> 
-  filter(f_l == 0) |> 
-  select(`CD%`) |> 
-  pull() |> 
-  mean(na.rm = TRUE)
-
-S_mb_SIMS <- co_registered_fit |> 
-  filter(f_l == 0) |> 
-  select(at2H_percent_dtc) |> 
-  pull() |> 
-  mean(na.rm = TRUE)
-
-# Calculate the standard error of the method blank
-sigma_mb_cd <- co_registered_fit |> 
-  filter(f_l == 0) |> 
-  select(`CD%`) |> 
-  pull() |> 
-  sd(na.rm = TRUE)
-
-sigma_mb_SIMS <- co_registered_fit |> 
-  filter(f_l == 0) |> 
-  select(at2H_percent_dtc) |> 
-  pull() |> 
-  sd(na.rm = TRUE)
-
-paste("The signal of the Raman blank is", round(S_mb_cd,3) , "%")
-paste("The signal of the nanoSIMS blank is", round(S_mb_SIMS,3) , "%")
-paste("The standard error of the Raman blank is", round(sigma_mb_cd,3) , "%")
-paste("The standard error of the nanoSIMS blank is", round(sigma_mb_SIMS,3) , "%")
-
-# Calculate LOD as signal_mb + 3sigma:
-LOD_cd <- S_mb_cd + (3 * sigma_mb_cd)
-LOD_SIMS <- S_mb_SIMS + (3 * sigma_mb_SIMS)
-
-# Calculate LOQ as signal_mb + 10sigma
-LOQ_cd <- S_mb_cd + (10 * sigma_mb_cd)
-LOQ_SIMS <- S_mb_SIMS + (10 * sigma_mb_SIMS)
-
-paste("The level of detection of Raman is", round(LOD_cd, 3), "atom %")
-paste("The level of detection of nanoSIMS is", round(LOD_SIMS, 3), "atom %")
-paste("The level of quantification of Raman is", round(LOQ_cd, 3), "atom %")
-paste("The level of quantification of nanoSIMS is", round(LOQ_SIMS, 3), "atom %")
-
-LOD_LOQ_exported <- tibble(
-  LOD_CD_percent = LOD_cd,
-  LOQ_CD_percent = LOQ_cd,
-  LOD_nanoSIMS = LOD_SIMS,
-  LOQ_nanoSIMS = LOQ_SIMS
-)
-
-writexl::write_xlsx(LOD_LOQ_exported, "data_output/LOD_LOQ_data.xlsx")
 ```
 
 # Calculate assimilation efficiency
@@ -187,7 +124,7 @@ Here we calculate `a` using both Raman and nanoSIMS data but report a using Rama
 
 ```{r}
 co_registered_fit_slim <- co_registered_fit |> 
-  filter(f_l < 40) |> 
+  filter(f_l < 50) |> 
   select(
     f_l, 
     `CD%`,
@@ -248,32 +185,6 @@ writexl::write_xlsx(assim_data, path = "data_output/assim_data.xlsx")
 
 ```
 
-# Quickplot the proxy fit
-
-```{r}
-co_registered_fit %>% 
-  ggplot(
-    aes(
-      y = at2H_percent_dtc,
-      x = `CD%`
-    )
-  ) +
-  geom_point() +
-  geom_smooth(
-    method = "lm",
-    formula = "y ~ x",
-    se = FALSE,
-    level = 0.99, # 99% confidence interval
-    color = "red"
-  ) +
-  geom_abline(slope = 1, linetype = "dashed") +
-  coord_cartesian(xlim = c(0,25), ylim =  c(0,45)) +
-  labs(
-    title = paste0("y = ", round(proxy_slope, 4), "x + ", round(proxy_y_int, 4))
-  ) +
-  theme_classic()
-```
-
 # Calculate SD/SE
 
 Here we estimate the standard deviation (SD) of each set of samples (grouped by label strength and method). Standard deviations are used for downstream error propagation.
@@ -288,7 +199,7 @@ $$
 
 ```{r}
 co_registered_fit_summarized <- co_registered_fit |> 
-  group_by(f_l) |> 
+  group_by(organism, f_l) |> 
   summarize(
     mean_cdpc = mean(`CD%`, na.rm = TRUE),
     sd_cdpc = sd(`CD%`, na.rm = TRUE),
@@ -304,12 +215,77 @@ co_registered_fit_summarized <- co_registered_fit |>
 
 co_registered_fit_summarized |> knitr::kable()
 
+# write the data
+co_registered_fit_summarized |> writexl::write_xlsx(path = "data_output/coreg_summarized.xlsx")
+
 co_registered_fit_summarized |> 
   summarize(
     SE_total_cdpc = mean(SE_cdpc),
     SE_total_2F = mean(SE_2F)
   )
 ```
+
+### SE of all cells
+
+#### Raman
+
+```{r}
+# Raman
+SE_summary_raman <- co_registered_fit |> 
+  group_by(f_l) |> 
+  summarize(
+    mean_cdpc = mean(`CD%`, na.rm = TRUE),
+    sd_cdpc = sd(`CD%`, na.rm = TRUE),
+    n = n()
+  ) |> 
+  mutate(
+    # calculate SE from the sample standard deviation
+    SE_cdpc = sd_cdpc / sqrt(n)
+  )
+
+writexl::write_xlsx(SE_summary_raman, path = "data_output/SE_summary_raman.xlsx")
+  
+```
+
+#### NanoSIMS
+
+```{r}
+SE_summary_SIMS <- co_registered_fit |> 
+  group_by(f_l) |> 
+  summarize(
+    mean_2F = mean(at2H_percent_dtc, na.rm = TRUE),
+    sd_2F = sd(at2H_percent_dtc, na.rm = TRUE),
+    n = n()
+  ) |> 
+    mutate(
+    # calculate SE from the sample standard deviation
+    SE_2F = sd_2F / sqrt(n)
+  )
+SE_summary_SIMS |> pull(sd_2F) |> mean()
+
+writexl::write_xlsx(SE_summary_SIMS, path = "data_output/SE_summary_SIMS.xlsx")
+```
+
+
+### SE of the method blank
+
+```{r}
+co_registered_fit |> 
+  filter(f_l == 0) |> 
+  summarize(
+    mean_cdpc = mean(`CD%`, na.rm = TRUE),
+    sd_cdpc = sd(`CD%`, na.rm = TRUE),
+    mean_2F = mean(at2H_percent_dtc, na.rm = TRUE),
+    sd_2F = sd(at2H_percent_dtc, na.rm = TRUE),
+    n = n()
+    ) |> 
+  mutate(
+    # calculate SE from the sample standard deviation
+    SE_cdpc = sd_cdpc / sqrt(n),
+    SE_2F = sd_2F / sqrt(n)
+  )
+```
+
 
 ## Quickplot the SD
 
@@ -326,12 +302,13 @@ co_registered_fit_summarized |>
     fill = method
   )) +
   geom_col(position = position_dodge(5), width = 5, color = "black") +
+  facet_wrap(vars(organism)) +
   scale_fill_manual(values = c("black", "white")) +
   coord_cartesian(expand = FALSE, xlim = c(-5, 60)) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   scale_x_continuous(labels = scales::percent_format(scale = 1),
                      breaks = c(0, 10, 20, 30, 40, 50)) +
-  theme_classic() +
+  theme_bw() +
   labs(
     x = latex2exp::TeX("Tracer Strength $^2F $ (at. %)"),
     y = latex2exp::TeX("$\\sigma_{^2F}$ (at. %)"),

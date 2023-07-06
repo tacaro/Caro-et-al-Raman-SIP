@@ -26,6 +26,8 @@ library(latex2exp)
 library(ggside)
 library(ggsci)
 library(ggdist)
+library(ggpmisc)
+library(ggpubr)
 ```
 
 ## Load from cache
@@ -34,7 +36,8 @@ library(ggdist)
 # Co-registered datasets
 co_registered <- read_rds("cache/co_registered.RDS") # Raw
 co_registered_fit <- read_rds("cache/co_registered_fitted.RDS") # Fitted
-co_registered_summarized <- read_rds("cache/coreg_data_summary.rds") # summarized
+co_registered_summarized <- read_rds("cache/coreg_data_summary.rds") # sumamrized
+  
 
 # Dilution factor data
 dilution_factors <- read_rds("cache/dilution_factors.rds")
@@ -50,7 +53,7 @@ fit_data <- read_rds("cache/fit_data.RDS")
 fitted_xy_data <- read_rds("cache/peak_data_xy.RDS")
 
 # LOD and LOQ data
-LOD_LOQ <- readxl::read_excel("data_output/LOD_LOQ_data.xlsx")
+#LOD_LOQ <- readxl::read_excel("data_output/LOD_LOQ_data.xlsx")
 
 
 ```
@@ -61,65 +64,7 @@ organism_colors <- c("#008c54", "#ffaa00")
 ```
 
 
-
-
-
 # Plot
-
-## Co-registered
-
-```{r co-registered_faceted}
-p_co_registered <- co_registered %>% 
-  filter(!is.na(f_l)) %>% 
-  # Plot it!
-  ggplot(
-    aes(y = at2H_percent_dtc,
-        x = cd_pc_corr,
-        #color = as.factor(f_l),
-        #group = organism.x,
-        #label = cell_id
-    )
-  ) +
-  stat_smooth(
-    formula = y ~ x,
-    #formula = y ~ splines::bs(x, 3),
-    linewidth = 1,
-    method = 'lm',
-    se = TRUE,
-    level = .99,
-    color = "red"
-  ) +
-  geom_point(
-    alpha = 0.9,
-    size = 1
-  ) +
-  geom_abline(
-    slope = 1,
-    linetype = "dashed",
-    color = "gray",
-    alpha = 1,
-  ) +
-  #facet_wrap(vars(organism.x)) +
-  coord_cartesian(
-    xlim = c(0,40), 
-    ylim = c(0,40)
-  ) +
-  scale_color_viridis_d(
-    end = 0.9,
-    option = "magma"
-    ) +
-  theme_bw() +
-  labs(
-    y = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
-    x = latex2exp::TeX("$^2F\\%_{Raman}$"),
-    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$"),
-    shape = ""
-  ) +
-  theme(
-    legend.position = "bottom"
-  )
-p_co_registered
-```
 
 
 ```{r linear model}
@@ -142,7 +87,7 @@ co_reg_fit_thy <- broom::tidy(
 co_reg_fit_mb <- broom::tidy(
   lm(data = co_registered %>%
        filter(
-         organism.x == "M. NSHQ14"
+         organism.x == "M. NSHQ04"
         ), 
      cd_pc_corr  ~ at2H_percent_dtc)
   )
@@ -152,59 +97,123 @@ print_lm_summary(co_reg_fit_mb)
 ```
 
 
-```{r co-registered-combined}
-p_co_registered2 <- co_registered %>% 
-  filter(!is.na(f_l)) %>% 
-  # Plot it!
+## Figure 1: CD / 2F ~ FL
+### Generate plot data
+```{r}
+
+# Summarized data:
+co_registered_summarized_plot <- co_registered_summarized |> 
+  select(-c(SE_cdpc, SE_2F)) |> 
+  pivot_longer(
+    cols = c(mean_2F, mean_cdpc),
+    values_to = "value",
+    names_to = "measurement"
+  ) |> 
+  mutate(
+    sd = case_when(
+      measurement == "mean_2F" ~ sd_2F,
+      measurement == "mean_cdpc" ~ sd_cdpc
+    )
+  ) |> 
+  mutate(
+    measurement = case_when(
+      measurement == "mean_2F" ~ "NanoSIMS",
+      measurement == "mean_cdpc" ~ "Raman",
+    )
+  ) |> 
+  mutate(
+    # factor so that Raman appears first
+    measurement = fct_relevel(measurement, "Raman")
+  ) |>
+  select(-c(sd_cdpc, sd_2F))
+
+
+# Raw data for linear fit:
+coreg_model_data_plot <- co_registered_fit_summarized |> 
+  pivot_longer(
+    cols = c(`CD%`, at2H_percent_dtc),
+    values_to = "value",
+    names_to = "measurement"
+  ) |> 
+  select(cell_id, organism, f_l, measurement, value) |> 
+  mutate(
+    measurement = case_when(
+      measurement == "at2H_percent_dtc" ~ "NanoSIMS",
+      measurement == "CD%" ~ "Raman",
+    )) |> 
+  mutate(
+    # factor so that Raman appears first
+    measurement = fct_relevel(measurement, "Raman")
+  ) 
+  
+```
+
+### Plot it!
+```{r}
+p_fig1 <- co_registered_summarized_plot |> 
+  filter(f_l <= 40) |> 
   ggplot(
-    aes(x = at2H_percent_dtc,
-        y = cd_pc_corr,
-        label = cell_id,
+    aes(
+      x = f_l,
+      y = value
     )
   ) +
-  geom_point(
+  # 1:1 line
+  geom_abline(slope = 1, color = "gray", alpha = 0.5, linetype = "dotted") +
+  # plot the lm from ALL the data, not the summarized points
+  ggpmisc::stat_poly_line(data = coreg_model_data_plot |> filter(f_l != 50),
+                          aes(x = f_l,
+                              y = value),
+                          fullrange = TRUE,
+                          se = FALSE,
+                          size = 0.3,
+                          color = "#080099") +
+  stat_poly_eq(data = coreg_model_data_plot |> filter(f_l != 50),
+               use_label(c("eq", "R2"))) +
+  # the 50% point
+  geom_pointinterval(
+    size = 2,
+    data = filter(co_registered_summarized_plot, f_l == 50),
+    aes(x = f_l, y = value, ymin = value - sd, ymax = value + sd),
+    color = "gray"
+  ) +
+  # the points
+  geom_pointinterval(
+    size = 2,
     aes(
-      color = as.factor(f_l),
-      #shape = organism.x
-      ),
-    alpha = 9,
-    size = 3
+      ymin = value - sd,
+      ymax = value + sd
+    )
   ) +
-  geom_abline(
-    slope = 1,
-    linetype = "dashed",
-    color = "gray",
-    alpha = 1,
-  ) +
-  stat_smooth(
-    formula = y ~ x,
-    #formula = y ~ splines::bs(x, 3),
-    size = 0.5,
-    method = 'lm',
-    se = TRUE,
-    color = "red"
-  ) +
-  coord_cartesian(
-    xlim = c(0,40), 
-    ylim = c(0,40)
-  ) +
-  scale_color_viridis_d(
-    end = 0.9,
-    option = "magma"
-    ) +
-  theme_bw() +
+  facet_grid(measurement ~ organism) +
+  scale_x_continuous(labels = scales::label_percent(scale = 1)) +
+  scale_y_continuous(labels = scales::label_percent(scale = 1)) +
+  coord_cartesian(xlim = c(0, 50), ylim = c(0,50)) +
   labs(
-    x = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
-    y = latex2exp::TeX("$^2F\\%_{Raman}$"),
-    color = "Label Strength (% D2O)"
+    x = latex2exp::TeX("Growth Water Enrichment ($^2F$)"),
+    y = latex2exp::TeX("Biomass Enrichment ($^2F$)")
   ) +
+  theme_classic() +
   theme(
-    legend.position = c(0.8, 0.25),
-    legend.background = element_rect(color = "black"),
-    legend.title = element_text(size = 10)
+    legend.position = "NA",
+    strip.background = element_blank(),
+    panel.border = element_rect(color = "black", fill = "NA", size = 1),
+    axis.line = element_blank(),
+    strip.background.x = element_rect(fill = "black", size = 1),
+    strip.background.y = element_rect(fill = "#363636", color = "#363636", size = 1),
+    strip.text = element_text(color = "white"),
+    aspect.ratio = 1
   )
-p_co_registered2
+
+p_fig1
+
+cowplot::save_plot(plot = p_fig1, filename = "fig_output/figure1.pdf", 
+                   base_height = 6, base_width = 6)
 ```
+
+
+
+
 
 
 
@@ -247,331 +256,175 @@ co_registered_summarized_mini |>
   
 ```
 
+## Supp: Co-registered
 
-## CD FL
-
-
-```{r}
-calculate_lm_from_coreg_CD <- function(dataset, organism_choice) {
-  return(
-    broom::tidy(
-  lm(
-    data = dataset %>% 
-      # filter out f_L 40 and 50 for the model
-      filter(f_l < 40, organism == organism_choice),
-    `CD%`  ~ f_l
-    )
-  ) |> 
-    # Add organism info
-    mutate(organism = organism_choice) |> 
-    select(term, estimate, organism) |> 
-    pivot_wider(names_from = term, values_from = estimate) |> 
-    mutate(
-       # determine sign for y intercept
-      sign = ifelse(`(Intercept)` < 0, "-", "+"),
-      # print out the equation for the line
-      equation = sprintf("y = %.2fx %s %.2f", f_l, sign, abs(`(Intercept)`))
-    )
-  )
-}
-
-cdfl_model_thy <- calculate_lm_from_coreg_CD(
-  dataset = co_registered_fit, 
-  organism_choice = "T. hydrogeniphilus")
-
-cdfl_model_mb <- calculate_lm_from_coreg_CD(
-  dataset = co_registered_fit,
-  organism_choice = "M. NSHQ14"
-)
-
-
-p_cd_fl <- co_registered_summarized %>% 
+```{r co-registered_faceted}
+p_co_registered <- co_registered %>% 
   filter(!is.na(f_l)) %>% 
+  # Plot it!
   ggplot(
-    aes(
-      x = f_l,
-      y = mean_cdpc
-      )
+    aes(y = at2H_percent_dtc,
+        x = cd_pc_corr,
+        #color = as.factor(f_l),
+        #group = organism.x,
+        #label = cell_id
+    )
   ) +
-  # 1:1 line
+   ggpmisc::stat_poly_line(
+                          fullrange = TRUE,
+                          se = FALSE,
+                          size = 0.3,
+                          color = "#363636") +
+  stat_poly_eq(use_label(c("eq", "R2"))) +
+  geom_point(
+    alpha = 0.7,
+    size = 1.5
+  ) +
   geom_abline(
     slope = 1,
     linetype = "dotted",
     color = "gray",
     alpha = 1,
   ) +
-  # LOD
-  # geom_hline(
-  #   yintercept = pull(select(LOD_LOQ, LOD_CD_percent)),
-  #   color = "red",
-  #   linetype = "dashed",
-  #   linewidth = 0.25
-  #     ) +
-  # # LOQ
-  # geom_hline(
-  #   yintercept = pull(select(LOD_LOQ, LOQ_CD_percent)),
-  #   color = "orange",
-  #   linetype = "dashed",
-  #   linewidth = 0.25
-  #     ) +
-  # T. hy linear fit
-  geom_abline(
-    data = cdfl_model_thy,
-    aes(
-      slope = f_l,
-      intercept = `(Intercept)`
-    ),
-    color = "#346beb",
-    linetype = "dashed"
+  #facet_wrap(vars(organism.x)) +
+  coord_cartesian(
+    xlim = c(0,40), 
+    ylim = c(0,40)
   ) +
-  # Mb linear fit
-  geom_abline(
-    data = cdfl_model_mb,
-    aes(
-      slope = f_l,
-      intercept = `(Intercept)`
-    ),
-    color = "#346beb",
-    linetype = "dashed"
-  ) +
-  geom_point(size = 2) +
-  geom_pointinterval(
-    aes(
-      ymin = mean_cdpc - sd_cdpc,
-      ymax = mean_cdpc + sd_cdpc
-    )
-  ) +
-  # Mb equation
-  geom_label(
-    data = cdfl_model_mb,
-    x = 42, 
-    y = 1,
-    color = "blue",
-    aes(
-      label = equation
-      )
-  ) +
-  # Thy equation
-   geom_label(
-    data = cdfl_model_thy,
-    x = 42, 
-    y = 1,
-    color = "blue",
-    aes(
-      label = equation
-      )
-  ) +
-  facet_wrap(vars(organism), scales = "free") +
-  scale_color_manual(values = organism_colors) + 
-  scale_x_continuous(
-    limits = c(0, 55),
-    breaks = c(0, 10, 20, 30, 40, 50)
+  scale_color_viridis_d(
+    end = 0.9,
+    option = "magma"
     ) +
-  scale_y_continuous(
-    limits = c(0, 55),
-    breaks = c(0, 10, 20, 30, 40, 50)
-  ) +
-  theme_classic() +
+  theme_bw() +
   labs(
-    x = latex2exp::TeX("Tracer Strength $^2F$ (at. %)"),
-    y = latex2exp::TeX("Biomass Enrichment $^2F$ (at. %)")
+    y = latex2exp::TeX("$^2F\\%_{nanoSIMS}$"),
+    x = latex2exp::TeX("$^2F\\%_{Raman}$"),
+    color = latex2exp::TeX("$^2H_2O$ Label Strength $^2F\\%$"),
+    shape = ""
   ) +
   theme(
-    legend.position = "NA",
-    strip.background = element_blank()
+    legend.position = "bottom",
+    aspect.ratio = 1
   )
-p_cd_fl
+p_co_registered
 
-# cowplot::save_plot(
-#   plot = p_cd_fl,
-#   filename = "fig_output/cd_fl.pdf",
-#   base_height = 4,
-#   base_width = 8
-# )
-```
-
-## 2F FL
-
-```{r}
-# Define a function to calculate linear models for 2F
-calculate_lm_from_coreg_2F <- function(dataset, organism_choice) {
-  return(
-    broom::tidy(
-  lm(
-    data = dataset %>% 
-      # filter out f_L 40 and 50 for the model
-      filter(f_l < 40, organism == organism_choice),
-    at2H_percent_dtc  ~ f_l
-    )
-  ) |> 
-    # Add organism info
-    mutate(organism = organism_choice) |> 
-    select(term, estimate, organism) |> 
-    pivot_wider(names_from = term, values_from = estimate) |> 
-    mutate(
-       # determine sign for y intercept
-      sign = ifelse(`(Intercept)` < 0, "-", "+"),
-      # print out the equation for the line
-      equation = sprintf("y = %.2fx %s %.2f", f_l, sign, abs(`(Intercept)`))
-    )
-  )
-}
-
-
-# Calculate linear models of nanoSIMS data using function defined above
-nanofl_model_thy <- calculate_lm_from_coreg_2F(
-  dataset = co_registered_fit, 
-  organism_choice = "T. hydrogeniphilus")
-
-nanofl_model_mb <- calculate_lm_from_coreg_2F(
-  dataset = co_registered_fit,
-  organism_choice = "M. NSHQ14"
-)
-
-
-# Plot it
-p_2f_fl <- co_registered_summarized %>% 
-  filter(!is.na(f_l)) %>% 
-  ggplot(
-    aes(
-      x = f_l,
-      y = mean_2F
-      )
-  ) +
-  # 1:1 line
-  geom_abline(
-    slope = 1,
-    linetype = "dotted",
-    color = "gray",
-    alpha = 1,
-  ) +
-  # LOD
-  # geom_hline(
-  #   yintercept = pull(select(LOD_LOQ, LOD_CD_percent)),
-  #   color = "red",
-  #   linetype = "dashed",
-  #   linewidth = 0.25
-  #     ) +
-  # # LOQ
-  # geom_hline(
-  #   yintercept = pull(select(LOD_LOQ, LOQ_CD_percent)),
-  #   color = "orange",
-  #   linetype = "dashed",
-  #   linewidth = 0.25
-  #     ) +
-  # T. hy linear fit
-  geom_abline(
-    data = nanofl_model_thy,
-    aes(
-      slope = f_l,
-      intercept = `(Intercept)`
-    ),
-    color = "#346beb",
-    linetype = "dashed"
-  ) +
-  # Mb linear fit
-  geom_abline(
-    data = nanofl_model_mb,
-    aes(
-      slope = f_l,
-      intercept = `(Intercept)`
-    ),
-    color = "#346beb",
-    linetype = "dashed"
-  ) +
-  geom_point(size = 2.5) +
-  geom_pointinterval(
-    aes(
-      ymin = mean_2F - sd_2F,
-      ymax = mean_2F + sd_2F
-    )
-  ) +
-  # Mb equation
-  geom_label(
-    data = nanofl_model_mb,
-    x = 42, 
-    y = 1,
-    color = "blue",
-    aes(
-      label = equation
-      )
-  ) +
-  # Thy equation
-   geom_label(
-    data = nanofl_model_thy,
-    x = 42, 
-    y = 1,
-    color = "blue",
-    aes(
-      label = equation
-      )
-  ) +
-  facet_wrap(vars(organism), scales = "free") +
-  scale_color_manual(values = organism_colors) + 
-  scale_x_continuous(
-    limits = c(0, 55),
-    breaks = c(0, 10, 20, 30, 40, 50)
-    ) +
-  scale_y_continuous(
-    limits = c(0, 55),
-    breaks = c(0, 10, 20, 30, 40, 50)
-  ) +
-  theme_classic() +
-  labs(
-    x = latex2exp::TeX("Tracer Strength $^2F$ (at. %)"),
-    y = latex2exp::TeX("Biomass Enrichment $^2F$ (at. %)")
-  ) +
-  theme(
-    legend.position = "NA",
-    strip.background = element_blank()
-  )
-p_2f_fl
-```
-
-## Cowplot: CD-FL and 2F-FL
-
-```{r}
-figure_1 <- cowplot::plot_grid(
-  p_cd_fl,
-  p_2f_fl,
-  ncol = 1
+cowplot::save_plot(
+  plot = p_co_registered,
+  filename = "fig_output/figS1.pdf",
+  base_height = 3,
+  base_width = 3
 )
 
 cowplot::save_plot(
-  filename = "fig_output/figure1.pdf",
-  figure_1,
-  base_height = 6,
-  base_width = 6
+  plot = p_co_registered,
+  filename = "fig_output/figS1.png",
+  base_height = 3,
+  base_width = 3
 )
 ```
 
-## 2R FL
+
+## Supp: Deadtime Correction Effect
 
 ```{r}
-co_registered %>% 
-  filter(!is.na(f_l)) %>% 
-  ggplot(
-    aes(x = as.factor(f_l),
-        y = `Ratio_2Hx1H`,
-        color = organism.x
-        )
+co_registered_lm <- lm(data = co_registered, at2H_percent_dtc ~ at2H_percent) |> 
+  broom::tidy()
+
+
+co_registered_dtc <- co_registered |> 
+  select(at2H_percent_dtc, at2H_percent, f_l) |> 
+  filter(!is.na(f_l)) |> 
+  ungroup() |> 
+  mutate(
+    at2H_residual= at2H_percent - at2H_percent_dtc) |>
+  mutate(n = as.character(row_number())) |> 
+  mutate(n = forcats::fct_reorder(n, -at2H_residual)) |> 
+  arrange(-at2H_residual) |> 
+  mutate(n_n = row_number())
+
+p_dtc_A <- co_registered_dtc |> ggplot() +
+  aes(
+    x = n_n,
+    y = at2H_residual,
+    color = as.factor(f_l)
   ) +
-  facet_wrap(vars(organism.x)) +
-  geom_point(
-    alpha = 0.25
-  ) +
-  scale_color_manual(values = organism_colors) + 
+  geom_point(alpha = 1, size = 1) +
+  ggside::geom_xsidedensity() +
+  scale_color_viridis_d(option = "plasma", begin = "0", end = 0.8) +
+  theme_bw() +
   labs(
-    x = latex2exp::TeX("$^2F$ Growth Water"),
-    y = latex2exp::TeX("$^2R_{nanoSIMS}$")
+    y = latex2exp::TeX("($^2F_{raw}$ - $^2F_{DTC}$) %"),
+    x = "",
+    color = latex2exp::TeX("$^2F_{label}$ %"),
   ) +
-  theme_classic() +
   theme(
-    legend.position = "NA",
-    strip.background = element_blank()
+    legend.position = "none",
+    ggside.panel.scale.x = .4,
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
   )
-  
+
+
+p_dtc_B <- co_registered_dtc |> ggplot() +
+  aes(
+    x = at2H_percent,
+    y = at2H_residual,
+    color = as.factor(f_l)
+  ) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = "y~x", color = "red", size = 0.5, se = FALSE) +
+  ggpubr::stat_regline_equation(
+     aes(label =  paste(..eq.label.., ..rr.label.., sep = "~~~~")),
+     color = "red",
+     size = 2
+  ) +
+  scale_color_viridis_d(option = "plasma", begin = "0", end = 0.8) +
+  labs(
+    y = latex2exp::TeX("($^2F_{raw}$ - $^2F_{DTC}$) %"),
+    x = latex2exp::TeX("$^2F_{raw}$ %"),
+    color = latex2exp::TeX("$^2F_{label}$ %"),
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "none"
+  )
+p_dtc_B
+
+
+p_dtc_C <- co_registered_dtc |> ggplot() +
+  aes(
+    x = at2H_percent,
+    y = at2H_percent_dtc
+  ) +
+  geom_point(aes(color = as.factor(f_l))) +
+  geom_smooth(method = "lm", formula = "y~x", color = "red", size = 0.5) +
+  ggpubr::stat_regline_equation(
+     aes(label =  paste(..eq.label.., ..rr.label.., sep = "~~~~")),
+     color = "red"
+  ) +
+  scale_color_viridis_d(option = "plasma", begin = "0", end = 0.8) +
+  labs(
+    x = latex2exp::TeX("$^2F_{raw}$%"),
+    y = latex2exp::TeX("$^2F_{DTC}$%"),
+    color = latex2exp::TeX("$^2F_{label}$ %")
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom"
+  )
+p_dtc_C
+
+top_row <- cowplot::plot_grid(p_dtc_A, p_dtc_B, labels = c("A", "B"), rel_widths = c(0.5, 0.5))
+p_dtc <- cowplot::plot_grid(top_row, p_dtc_C, nrow = 2, labels = c(" ", "C"), rel_heights = c(0.4, 0.6))
+
+cowplot::save_plot(plot = p_dtc, filename = "fig_output/dtc_effect.pdf",
+                   base_height = 6, base_width = 6)
+cowplot::save_plot(plot = p_dtc, filename = "fig_output/dtc_effect.png",
+                   base_height = 6, base_width = 6)
+
 ```
+
+
 
 
 ## Raman spectrum
@@ -785,7 +638,7 @@ p_fit_thy <- fit_data %>%
   mutate(organism =
     case_when(
       str_detect(sample, "Thy") ~ "T. hydrogeniphilus",
-      str_detect(sample, "Mb") ~ "M. NSHQ14"
+      str_detect(sample, "Mb") ~ "M. NSHQ04"
       )
   ) %>% 
   pivot_longer(
@@ -810,7 +663,7 @@ p_fit_mb <- fit_data %>%
   mutate(organism =
     case_when(
       str_detect(sample, "Thy") ~ "T. hydrogeniphilus",
-      str_detect(sample, "Mb") ~ "M. NSHQ14"
+      str_detect(sample, "Mb") ~ "M. NSHQ04"
       )
   ) %>% 
   pivot_longer(
@@ -818,7 +671,7 @@ p_fit_mb <- fit_data %>%
     names_to = "fit_param",
     values_to = "value"
   ) %>%
-  filter(organism == "M. NSHQ14") %>% 
+  filter(organism == "M. NSHQ04") %>% 
   ggplot(
     aes(x = value,
         fill = organism)
@@ -833,4 +686,7 @@ p_fit_mb <- fit_data %>%
 
 cowplot::plot_grid(p_fit_thy, p_fit_mb)
 ```
+
+
+
 

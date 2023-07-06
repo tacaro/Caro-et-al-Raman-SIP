@@ -1,0 +1,211 @@
+---
+title: "04_molecules_H"
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+editor: visual
+editor_options: 
+  chunk_output_type: console
+bibliography: references.bib
+---
+
+## Molecular Inventory of H
+
+Here we generate a rough estimate of the fraction of cellular hydrogen that is exchangeable with the aqueous environment, versus non-exchangeable hydrogen.
+
+### Setup
+
+```{r}
+#| include: false
+library(tidyverse)
+library(gt)
+```
+
+### Load data
+
+```{r}
+#| include: false
+molecule_H <- readxl::read_excel("data/chemdraws/all_the_molecules.xlsx") |> 
+  mutate(MW = as.numeric(MW)) |> 
+  rename(umol_per_g = `amt (umol/g dried cells)`)
+molecule_H
+
+
+```
+
+### Mole fraction of cell components
+
+First let's examine the relative abundances of various biomolecules:
+
+```{r}
+molecule_H |> 
+  select(compound, group, umol_per_g, H, H_exchangable, frac_H_exc) |> 
+  gt() |> 
+  data_color(columns = umol_per_g, palette = "Greens") |> 
+  data_color(columns = frac_H_exc, palette = "Blues") |> 
+  tab_style(
+    locations = cells_body(columns = compound),
+    style = cell_text(weight = "bold")
+  )
+```
+
+Based on this dataset, the total $\mu mol \cdot g$ of biomolecules per cell mass is:
+
+```{r}
+total_umol_per_g <- molecule_H |> pull(umol_per_g) |> sum()
+total_umol_per_g
+```
+
+so we can calculate the relative fraction of each biomolecule and plot it:
+
+```{r}
+molecule_H <- molecule_H |> 
+  # this represents the fraction of this biomolecule relative to all the biomolecules
+  mutate(molecule_mol_frac = umol_per_g / total_umol_per_g)
+```
+
+```{r}
+#| fig-width: 6
+#| fig-height: 8
+
+p_mole_frac <- molecule_H |> 
+  mutate(compound = fct_reorder(.f = compound, .x = molecule_mol_frac)) |> 
+  ggplot() +
+  aes(
+    x = molecule_mol_frac,
+    y = compound,
+    fill = group
+  ) +
+  geom_col() +
+  scale_x_continuous(labels = scales::percent) +
+  theme_bw() +
+  labs(
+    x = "Mole %"
+  ) +
+  theme(
+    axis.title.y = element_blank(),
+    legend.title = element_blank(),
+    legend.position = "left"
+  )
+
+p_mole_frac
+```
+
+```{r}
+
+```
+
+### Calculate H
+
+To calculate the mole fraction of hydrogen in a cell that is exchangeable, we first need to know (i) the total number of moles of H in a cell and (ii) the fraction of these that are exchangeable:
+
+$$
+\begin{aligned}
+F_{H_{ex}} &= \frac{H_{ex}}{H_{ex} + H_{non}} \\
+\space \\
+H_{total} &= H_{ex} + H_{non} 
+\end{aligned}
+$$
+
+where $H_{total}$ is the total moles of H in a cell, $H_{ex}$ is the moles of hydrogen in a cell that is bonded at an exchangeable site, $H_{non}$ is moles of hydrogen in a cell at a non-exchangeable site, and $F_{H_{ex}}$ is the fraction of cellular hydrogen that is exchangeable. From the Neinhardt dataset [@escheric1987], we have constraints on the mole fraction of many biocomponents:
+
+```{r}
+molecule_H_calc <- molecule_H |> 
+  # calculate total number of moles H this component contributes to the cell
+  # calculate total number of moles exchangeable H this component contributes to the cell
+  mutate(
+    umol_Htot_per_g = umol_per_g * H,
+    umol_Hex_per_g = umol_per_g * H_exchangable,
+    umol_Hnon_per_g = umol_Htot_per_g - umol_Hex_per_g
+  )
+
+molecule_H_calc |> 
+  summarize(
+    sum_umol_Htot_per_g = sum(umol_Htot_per_g),
+    sum_umol_Hex_per_g = sum(umol_Hex_per_g)
+  ) |> 
+  mutate(frac_H_exchangeable = sum_umol_Hex_per_g / sum_umol_Htot_per_g) |> 
+  rename(
+    `µmol H (Exchangeable) / g` = sum_umol_Hex_per_g,
+    `µmol H (Total) / g` = sum_umol_Htot_per_g,
+    `Fraction of Exchangeable H` = frac_H_exchangeable
+  ) |> 
+  knitr::kable()
+```
+
+So, by tabulating all of the hydrogen in the cell and determining whether it is exchangeable or not, we can see that about **21%** of a cell's H pool is rapidly exchangeable with water.
+
+```{r}
+molecule_H_calc |> 
+  select(compound, group, umol_Hex_per_g, umol_Hnon_per_g) |> 
+  pivot_longer(cols = c(umol_Hnon_per_g, umol_Hex_per_g),
+               names_to = "source", values_to = "umol_per_g") |> 
+  mutate(
+    source = if_else(
+      source == "umol_Hnon_per_g",
+      true = "H_nonexchangeable",
+      false = "H_exchangeable"
+    )
+  ) |> 
+  mutate(compound = fct_reorder(.f = compound, .x = umol_per_g)) |> 
+  ggplot() +
+  aes(
+    x = umol_per_g,
+    y = compound,
+    fill = source
+  ) +
+  geom_col() +
+  theme_bw() +
+  labs(
+    x = "µmol / g"
+  ) +
+  theme(
+    legend.position = "top",
+    legend.title = element_blank(),
+    axis.title.y = element_blank()
+  )
+```
+
+Here we look at the fraction of exchangeable hydrogen for each biomolecule analyzed:
+
+```{r}
+molecule_H_calc |> 
+  mutate(frac_nHex = umol_Hex_per_g / umol_Htot_per_g) |> 
+  mutate(compound = fct_reorder(.f = compound, .x = frac_nHex)) |> 
+  ggplot() +
+  aes(
+    x = frac_nHex,
+    y = compound,
+    fill = group
+  ) +
+  geom_col(position = "dodge") +
+  scale_x_continuous(labels = scales::percent) +
+  coord_cartesian(xlim = c(0, 0.6), expand = FALSE) +
+  theme_bw() +
+  labs(
+    x = "Fraction of Exchangeable H",
+    y = "",
+    fill = ""
+  )
+```
+
+And here we examine the relative contributions of fractional H by each component of the cell:
+
+```{r}
+molecule_H_calc |> 
+  mutate(compound = fct_reorder(.f = compound, .x = umol_Hex_per_g)) |> 
+  ggplot() +
+  aes(
+    x = umol_Hex_per_g,
+    y = compound,
+    fill = group
+  ) +
+  geom_col(position = "dodge") +
+  theme_bw() +
+  labs(
+    x = "µmol exchangeable H / g",
+    y = "",
+    fill = ""
+  )
+```
