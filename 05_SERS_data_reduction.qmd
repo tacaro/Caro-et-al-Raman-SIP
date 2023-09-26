@@ -1,0 +1,127 @@
+---
+title: "SERS Data Reduction"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Setup
+
+```{r}
+library(tidyverse)
+library(ggprism)
+library(hyperSpec)
+source("source/read_raman_file_rm_mtda.R")
+```
+
+### Load SERS Raman spectra
+
+```{r}
+df1 <- read_raman_file_rm_mtda("data/SERS/sers_time_comparison/SERS_30D2O_1x_0_25s_532 nm_x100_10%_600 gr_mm_01.txt")
+
+df2 <- read_raman_file_rm_mtda("data/SERS/sers_time_comparison/SERS_30D2O_1x_0_5s_532 nm_x100_10%_600 gr_mm_01.txt")
+
+df3 <- read_raman_file_rm_mtda("data/SERS/sers_time_comparison/SERS_30D2O_1x_1s_532 nm_x100_10%_600 gr_mm_01.txt")
+```
+
+```{r}
+df_sers <- df1 |> bind_rows(df2, df3) |> 
+  mutate(
+    acq_time = case_when(
+      str_detect(filename, "_1s_") ~ "1 second",
+      str_detect(filename, "_0_5s_") ~ "0.5 seconds",
+      str_detect(filename, "_0_25s_") ~ "0.25 seconds"
+    )
+  )
+```
+
+### Load SERS map
+
+```{r}
+sers_map <- read.txt.Horiba.t(file = "data/SERS/sers_map/SERS_30D2O_1x_0_5s_532 nm_x100_10%_600 gr_mm_03_0.txt")
+
+#hyperSpec::plotc(sers_map, groups = ".wavelength")
+
+t = sers_map$t
+spc = sers_map$spc |> 
+  as_tibble() |> 
+  pivot_longer(cols = everything(),
+               names_to = "wavenumber",
+               values_to = "intensity") |> 
+  mutate(
+    wavenumber = as.numeric(wavenumber),
+    intensity = as.numeric(intensity),
+    n = row_number(), 
+    t = as.factor(n %/% 917)
+  )
+
+```
+
+## Inspect plot
+
+```{r}
+p_sers_time_comp <- df_sers |> 
+  ggplot() +
+  aes(
+    x = wavenumber_cm,
+    y = intensity,
+    color = acq_time
+  ) +
+  facet_wrap(vars(acq_time), scales = "free_y", ncol = 1) +
+  scale_y_continuous(
+    guide = "prism_offset_minor"
+  ) +
+  scale_x_continuous(
+    guide = "prism_minor"
+  ) +
+  geom_line() +
+  ggprism::theme_prism() +
+  labs(
+    x = latex2exp::TeX("Wavenumber ($cm^{-1}$)"),
+    y = "Intensity (AU)"
+  ) +
+  theme(
+    legend.position = "None",
+    #strip.text = element_blank()
+  )
+p_sers_time_comp
+
+cowplot::save_plot(
+  filename = "fig_output/sers_time_comp.pdf",
+  plot = p_sers_time_comp,
+  base_height = 7,
+  base_width = 7
+)
+```
+
+```{r}
+
+p_spc <- spc |> 
+  ggplot(
+    aes(
+      x = as.numeric(wavenumber),
+      y = intensity,
+      color = t
+    )
+  ) +
+  scale_colour_viridis_d(option = "plasma") +
+  coord_cartesian(expand = FALSE) +
+  geom_line() +
+  labs(
+    x = latex2exp::TeX("Wavenumber ($cm^{-1}$)"),
+    y = "Intensity (AU)"
+  ) +
+  theme_classic() +
+    theme(
+    legend.position = "None"
+  )
+p_spc
+
+cowplot::save_plot(
+  filename = "fig_output/sers_map.pdf",
+  plot = p_spc,
+  base_height = 4,
+  base_width = 8
+)
+```
