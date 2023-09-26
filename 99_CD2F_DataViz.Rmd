@@ -20,14 +20,16 @@ rm(list=ls())
 ## Load libraries
 
 ```{r}
-library(tidyverse)
-library(cowplot)
-library(latex2exp)
-library(ggside)
-library(ggsci)
-library(ggdist)
-library(ggpmisc)
-library(ggpubr)
+library(tidyverse) # CRAN v2.0.0
+library(cowplot)   # CRAN v1.1.1
+library(latex2exp) # CRAN v0.9.6
+library(ggside)    # CRAN v0.2.2
+library(ggsci)     # CRAN v3.0.0
+library(ggdist)    # CRAN v3.3.0
+library(ggpmisc)   # CRAN v0.5.4-1
+library(ggpubr)    # CRAN v0.6.0
+library(ggprism)   # CRAN v1.0.4
+library(lans2r)
 ```
 
 ## Load from cache
@@ -97,8 +99,89 @@ print_lm_summary(co_reg_fit_mb)
 ```
 
 
+
 ## Figure 1: CD / 2F ~ FL
-### Generate plot data
+
+### Fig. 1A: Example Spectra
+
+Using cells "Thy_50_12_07", "Thy_00_07_23" as our examples.
+
+```{r}
+spectrum_palette = c("#0c008f", "#d43763")
+
+p_spectra <- fitted_xy_data |> 
+  filter(sample %in% c("Thy_00_07", "Thy_50_12")) |> 
+  filter(cell_id %in% c("Thy_50_12_07", "Thy_00_07_23")) |> 
+  mutate(
+    Label = case_when(
+      str_detect(cell_id, "Thy_50") ~ "50%",
+      str_detect(cell_id, "Thy_00") ~ "0%",
+    ),
+    intensity = case_when(
+      Label == "50%" ~ intensity + 100,
+      Label == "0%" ~ intensity
+    )
+  ) |> 
+  ggplot() +
+  aes(
+    x = wavenumber_cm,
+    y = intensity,
+    color = Label,
+    fill = Label
+  ) +
+  geom_line(linewidth = 1, alpha = 0.8) +
+  #facet_grid(vars(cell_id)) +
+  scale_color_manual(values = spectrum_palette) +
+  scale_fill_manual(values = spectrum_palette) +
+  guides(x = "prism_offset_minor", y = "prism_offset_minor") + 
+  labs(
+    x = latex2exp::TeX("Wavenumber ($cm^{-1}$)"),
+    y = "Intensity (AU)",
+    color = "Growth Medium Deuterium\nEnrichment (at. %)",
+    fill = "Growth Medium Deuterium\nEnrichment (at. %)"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = c(0.3, 0.8),
+    legend.background = element_rect(color = "black"),
+    strip.text = element_blank(),
+    axis.text.x = element_text(color = "black", face = "bold"),
+    axis.text.y = element_blank()
+  )
+p_spectra
+
+cowplot::save_plot(
+  plot = p_spectra,
+  filename = "fig_output/Fig1A.pdf",
+  base_height = 4,
+  base_width = 6
+)
+```
+
+### Fig. 1B: Example nanoSIMS
+
+```{python}
+print("Hello World!")
+import matplotlib.pyplot as plt
+import sims
+
+s = sims.SIMS('data/nanoSIMS/example_im/Thy_50_12_r4_r.im')
+
+# Align the image stack
+aligned_data, shifts = sims.utils.align(s)
+
+# Display total counts of aligned mass 1H as an image
+plt.imshow(aligned_data.loc['2H'].sum(dim='frame'))
+cbar = plt.colorbar()
+# The unit of the data is stored in the attributed dictionary
+cbar.set_label(s.data.attrs['unit'])
+plt.xlabel('X (pixels)')
+plt.ylabel('Y (pixels)')
+plt.show()
+```
+
+
+### Fig. 1D Summarized data
 ```{r}
 
 # Summarized data:
@@ -129,7 +212,7 @@ co_registered_summarized_plot <- co_registered_summarized |>
 
 
 # Raw data for linear fit:
-coreg_model_data_plot <- co_registered_fit_summarized |> 
+coreg_model_data_plot <- co_registered_fit |> 
   pivot_longer(
     cols = c(`CD%`, at2H_percent_dtc),
     values_to = "value",
@@ -148,7 +231,7 @@ coreg_model_data_plot <- co_registered_fit_summarized |>
   
 ```
 
-### Plot it!
+### Fig. 1D Output
 ```{r}
 p_fig1 <- co_registered_summarized_plot |> 
   filter(f_l <= 40) |> 
@@ -159,17 +242,21 @@ p_fig1 <- co_registered_summarized_plot |>
     )
   ) +
   # 1:1 line
-  geom_abline(slope = 1, color = "gray", alpha = 0.5, linetype = "dotted") +
+  geom_abline(slope = 1, color = "black", alpha = 0.5) +
   # plot the lm from ALL the data, not the summarized points
-  ggpmisc::stat_poly_line(data = coreg_model_data_plot |> filter(f_l != 50),
-                          aes(x = f_l,
-                              y = value),
-                          fullrange = TRUE,
-                          se = FALSE,
-                          size = 0.3,
-                          color = "#080099") +
-  stat_poly_eq(data = coreg_model_data_plot |> filter(f_l != 50),
-               use_label(c("eq", "R2"))) +
+  ggpmisc::stat_poly_line(
+    data = coreg_model_data_plot |> filter(f_l != 50),
+      aes(x = f_l,
+          y = value),
+      fullrange = TRUE,
+      se = FALSE,
+      size = 0.3,
+      color = "#080099"
+    ) +
+  stat_poly_eq(
+    data = coreg_model_data_plot |> filter(f_l != 50),
+    use_label(c("eq", "R2"))
+    ) +
   # the 50% point
   geom_pointinterval(
     size = 2,
@@ -177,21 +264,26 @@ p_fig1 <- co_registered_summarized_plot |>
     aes(x = f_l, y = value, ymin = value - sd, ymax = value + sd),
     color = "gray"
   ) +
-  # the points
+  # the rest of the points
   geom_pointinterval(
-    size = 2,
     aes(
+      fill = organism,
       ymin = value - sd,
       ymax = value + sd
-    )
+    ),
+    point_size = 2.7,
+    shape = 21,
+    color = "black"
   ) +
+  scale_fill_manual(values = organism_colors) +
   facet_grid(measurement ~ organism) +
   scale_x_continuous(labels = scales::label_percent(scale = 1)) +
   scale_y_continuous(labels = scales::label_percent(scale = 1)) +
+  ggprism::annotation_ticks(sides = "trbl") +
   coord_cartesian(xlim = c(0, 50), ylim = c(0,50)) +
   labs(
-    x = latex2exp::TeX("Growth Water Enrichment ($^2F$)"),
-    y = latex2exp::TeX("Biomass Enrichment ($^2F$)")
+    x = latex2exp::TeX("Growth Water Deuterium Enrichment ($^2F_{gw}$)"),
+    y = latex2exp::TeX("Biomass Deuterium Enrichment ($^2F_{Biomass}$)")
   ) +
   theme_classic() +
   theme(
@@ -201,14 +293,19 @@ p_fig1 <- co_registered_summarized_plot |>
     axis.line = element_blank(),
     strip.background.x = element_rect(fill = "black", size = 1),
     strip.background.y = element_rect(fill = "#363636", color = "#363636", size = 1),
-    strip.text = element_text(color = "white"),
-    aspect.ratio = 1
+    strip.text = element_text(color = "white", size = 12, face = "bold"),
+    aspect.ratio = 1,
+    axis.text = element_text(face = "bold", color = "black"),
+    axis.title = element_text(face = "bold", color = "black")
   )
 
 p_fig1
 
-cowplot::save_plot(plot = p_fig1, filename = "fig_output/figure1.pdf", 
-                   base_height = 6, base_width = 6)
+cowplot::save_plot(
+  plot = p_fig1, 
+  filename = "fig_output/Fig1D.pdf",                     
+  base_height = 8, base_width = 8
+  )
 ```
 
 
@@ -425,6 +522,49 @@ cowplot::save_plot(plot = p_dtc, filename = "fig_output/dtc_effect.png",
 ```
 
 
+## Supp: T. hy vs. NSHQ04 spectra
+
+```{r}
+p_species_spectrum <- cd_pc_data |> 
+  filter(cell_id %in% c("Thy_50_12_25", "Mb_50_18_32")) |> 
+  mutate(
+    organism = case_when(
+      str_detect(cell_id, "Thy") ~ "T. hydrogeniphilus",
+      str_detect(cell_id, "Mb") ~ "M. NSHQ04"
+    )
+  ) |> 
+  ggplot() +
+  aes(
+    x = wavenumber_cm,
+    y = intensity,
+    color = organism
+  ) +
+  geom_line() +
+  facet_wrap(vars(cell_id), scales = "free_y", ncol = 1) +
+  scale_color_manual(values = organism_colors) +
+  scale_fill_manual(values = organism_colors) +
+  labs(
+    x = latex2exp::TeX("Wavenumber ($cm^{-1}$)"),
+    y = "Intensity (AU)",
+    color = "",
+    fill = ""
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "top",
+    legend.background = element_rect(color = "black"),
+    strip.text = element_blank(),
+    axis.text.x = element_text(color = "black", face = "bold"),
+    axis.text.y = element_blank()
+  )
+
+cowplot::save_plot(
+  filename = "fig_output/species_spectrum.pdf",
+  p_species_spectrum,
+  base_height = 8,
+  base_width = 8
+)
+```
 
 
 ## Raman spectrum
