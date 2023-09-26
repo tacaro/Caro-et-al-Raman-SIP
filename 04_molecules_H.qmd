@@ -1,4 +1,5 @@
 ---
+= ---
 title: "04_molecules_H"
 format:
   html:
@@ -8,6 +9,8 @@ editor: visual
 editor_options: 
   chunk_output_type: console
 bibliography: references.bib
+production:
+  CHROMOTE_CHROME: /Applications/Brave Browser.app
 ---
 
 ## Molecular Inventory of H
@@ -20,6 +23,7 @@ Here we generate a rough estimate of the fraction of cellular hydrogen that is e
 #| include: false
 library(tidyverse)
 library(gt)
+library(webshot2)
 ```
 
 ### Load data
@@ -39,15 +43,20 @@ molecule_H
 First let's examine the relative abundances of various biomolecules:
 
 ```{r}
-molecule_H |> 
+table_gt <- molecule_H |> 
   select(compound, group, umol_per_g, H, H_exchangable, frac_H_exc) |> 
+  rename(`umol per g` = umol_per_g,
+         `Total H` = H,
+         `H (Exchangeable)` = H_exchangable,
+         `Fraction Exchangeable` = frac_H_exc) |> 
   gt() |> 
-  data_color(columns = umol_per_g, palette = "Greens") |> 
-  data_color(columns = frac_H_exc, palette = "Blues") |> 
+  data_color(columns = `umol per g`, palette = "Greens") |> 
+  data_color(columns = `Fraction Exchangeable`, palette = "Blues") |> 
   tab_style(
     locations = cells_body(columns = compound),
     style = cell_text(weight = "bold")
   )
+table_gt
 ```
 
 Based on this dataset, the total $\mu mol \cdot g$ of biomolecules per cell mass is:
@@ -79,14 +88,16 @@ p_mole_frac <- molecule_H |>
   ) +
   geom_col() +
   scale_x_continuous(labels = scales::percent) +
-  theme_bw() +
   labs(
     x = "Mole %"
   ) +
+  theme_bw() +
   theme(
     axis.title.y = element_blank(),
     legend.title = element_blank(),
-    legend.position = "left"
+    panel.grid = element_blank(),
+    axis.text = element_text(color = "black"),
+    legend.position = "None"
   )
 
 p_mole_frac
@@ -137,15 +148,15 @@ molecule_H_calc |>
 So, by tabulating all of the hydrogen in the cell and determining whether it is exchangeable or not, we can see that about **21%** of a cell's H pool is rapidly exchangeable with water.
 
 ```{r}
-molecule_H_calc |> 
+p_umol_g <- molecule_H_calc |> 
   select(compound, group, umol_Hex_per_g, umol_Hnon_per_g) |> 
   pivot_longer(cols = c(umol_Hnon_per_g, umol_Hex_per_g),
                names_to = "source", values_to = "umol_per_g") |> 
   mutate(
     source = if_else(
       source == "umol_Hnon_per_g",
-      true = "H_nonexchangeable",
-      false = "H_exchangeable"
+      true = "Non-Exchangeable",
+      false = "Exchangeable"
     )
   ) |> 
   mutate(compound = fct_reorder(.f = compound, .x = umol_per_g)) |> 
@@ -155,6 +166,8 @@ molecule_H_calc |>
     y = compound,
     fill = source
   ) +
+  scale_fill_manual(values = c("#3498eb", "black")) +
+  coord_cartesian(expand = FALSE, xlim = c(0, 7800)) +
   geom_col() +
   theme_bw() +
   labs(
@@ -163,14 +176,17 @@ molecule_H_calc |>
   theme(
     legend.position = "top",
     legend.title = element_blank(),
-    axis.title.y = element_blank()
+    axis.title.y = element_blank(),
+    panel.grid = element_blank(),
+    axis.text = element_text(color = "black")
   )
+p_umol_g
 ```
 
 Here we look at the fraction of exchangeable hydrogen for each biomolecule analyzed:
 
 ```{r}
-molecule_H_calc |> 
+p_frac_exch <- molecule_H_calc |> 
   mutate(frac_nHex = umol_Hex_per_g / umol_Htot_per_g) |> 
   mutate(compound = fct_reorder(.f = compound, .x = frac_nHex)) |> 
   ggplot() +
@@ -187,7 +203,19 @@ molecule_H_calc |>
     x = "Fraction of Exchangeable H",
     y = "",
     fill = ""
+  ) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(color = "black")
   )
+p_frac_exch
+
+cowplot::save_plot(
+  filename = "fig_output/frac_exch.pdf",
+  plot = p_frac_exch,
+  base_height = 6,
+  base_width = 7
+)
 ```
 
 And here we examine the relative contributions of fractional H by each component of the cell:
@@ -208,4 +236,38 @@ molecule_H_calc |>
     y = "",
     fill = ""
   )
+```
+
+# Make a nice supplementary figure:
+
+```{r}
+p_combined_plot <- cowplot::plot_grid(
+  p_mole_frac, p_frac_exch, p_umol_g,
+  labels = c("A", "B", "C")
+  )
+p_combined_plot
+
+# cowplot::save_plot(
+#   filename = "fig_output/all_the_molecules.pdf",
+#   plot = p_combined_plot,
+#   base_height = 12,
+#   base_width = 10
+# )
+```
+
+```{r}
+a <- tibble(
+  b = c(0.79, 0.21),
+  c = c("A", "B")
+)
+
+pa <- a |> ggplot() +
+  aes(x = 1, y = b, fill = c) +
+  geom_col() +
+  theme_classic()
+
+cowplot::save_plot(filename = "fig_output/bar.pdf",
+                   plot = pa,
+                   base_height = 8,
+                   base_width = 5)
 ```

@@ -158,35 +158,40 @@ div.csl-indent {
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>molecule_H <span class="sc">|&gt;</span> </span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(compound, umol_per_g, H, H_exchangable, frac_H_exc) <span class="sc">|&gt;</span> </span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">gt</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data_color</span>(<span class="at">columns =</span> umol_per_g, <span class="at">palette =</span> <span class="st">"Greens"</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data_color</span>(<span class="at">columns =</span> frac_H_exc, <span class="at">palette =</span> <span class="st">"Blues"</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tab_style</span>(</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">locations =</span> <span class="fu">cells_body</span>(<span class="at">columns =</span> compound),</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">style =</span> <span class="fu">cell_text</span>(<span class="at">weight =</span> <span class="st">"bold"</span>)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>table_gt <span class="ot">&lt;-</span> molecule_H <span class="sc">|&gt;</span> </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(compound, group, umol_per_g, H, H_exchangable, frac_H_exc) <span class="sc">|&gt;</span> </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="st">`</span><span class="at">umol per g</span><span class="st">`</span> <span class="ot">=</span> umol_per_g,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Total H</span><span class="st">`</span> <span class="ot">=</span> H,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">H (Exchangeable)</span><span class="st">`</span> <span class="ot">=</span> H_exchangable,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>         <span class="st">`</span><span class="at">Fraction Exchangeable</span><span class="st">`</span> <span class="ot">=</span> frac_H_exc) <span class="sc">|&gt;</span> </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">gt</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data_color</span>(<span class="at">columns =</span> <span class="st">`</span><span class="at">umol per g</span><span class="st">`</span>, <span class="at">palette =</span> <span class="st">"Greens"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data_color</span>(<span class="at">columns =</span> <span class="st">`</span><span class="at">Fraction Exchangeable</span><span class="st">`</span>, <span class="at">palette =</span> <span class="st">"Blues"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tab_style</span>(</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">locations =</span> <span class="fu">cells_body</span>(<span class="at">columns =</span> compound),</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">style =</span> <span class="fu">cell_text</span>(<span class="at">weight =</span> <span class="st">"bold"</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>table_gt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 
-<div id="tqqdsusiba" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#tqqdsusiba table {
+<div id="ycltvepdqo" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#ycltvepdqo table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#tqqdsusiba thead, #tqqdsusiba tbody, #tqqdsusiba tfoot, #tqqdsusiba tr, #tqqdsusiba td, #tqqdsusiba th {
+#ycltvepdqo thead, #ycltvepdqo tbody, #ycltvepdqo tfoot, #ycltvepdqo tr, #ycltvepdqo td, #ycltvepdqo th {
   border-style: none;
 }
 
-#tqqdsusiba p {
+#ycltvepdqo p {
   margin: 0;
   padding: 0;
 }
 
-#tqqdsusiba .gt_table {
+#ycltvepdqo .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -212,12 +217,12 @@ div.csl-indent {
   border-left-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_caption {
+#ycltvepdqo .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#tqqdsusiba .gt_title {
+#ycltvepdqo .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -229,7 +234,7 @@ div.csl-indent {
   border-bottom-width: 0;
 }
 
-#tqqdsusiba .gt_subtitle {
+#ycltvepdqo .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -241,7 +246,7 @@ div.csl-indent {
   border-top-width: 0;
 }
 
-#tqqdsusiba .gt_heading {
+#ycltvepdqo .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -253,13 +258,13 @@ div.csl-indent {
   border-right-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_bottom_border {
+#ycltvepdqo .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_col_headings {
+#ycltvepdqo .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -274,7 +279,7 @@ div.csl-indent {
   border-right-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_col_heading {
+#ycltvepdqo .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -294,7 +299,7 @@ div.csl-indent {
   overflow-x: hidden;
 }
 
-#tqqdsusiba .gt_column_spanner_outer {
+#ycltvepdqo .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -306,15 +311,15 @@ div.csl-indent {
   padding-right: 4px;
 }
 
-#tqqdsusiba .gt_column_spanner_outer:first-child {
+#ycltvepdqo .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#tqqdsusiba .gt_column_spanner_outer:last-child {
+#ycltvepdqo .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#tqqdsusiba .gt_column_spanner {
+#ycltvepdqo .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -326,11 +331,11 @@ div.csl-indent {
   width: 100%;
 }
 
-#tqqdsusiba .gt_spanner_row {
+#ycltvepdqo .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#tqqdsusiba .gt_group_heading {
+#ycltvepdqo .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -356,7 +361,7 @@ div.csl-indent {
   text-align: left;
 }
 
-#tqqdsusiba .gt_empty_group_heading {
+#ycltvepdqo .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -371,15 +376,15 @@ div.csl-indent {
   vertical-align: middle;
 }
 
-#tqqdsusiba .gt_from_md > :first-child {
+#ycltvepdqo .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#tqqdsusiba .gt_from_md > :last-child {
+#ycltvepdqo .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#tqqdsusiba .gt_row {
+#ycltvepdqo .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -398,7 +403,7 @@ div.csl-indent {
   overflow-x: hidden;
 }
 
-#tqqdsusiba .gt_stub {
+#ycltvepdqo .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -411,7 +416,7 @@ div.csl-indent {
   padding-right: 5px;
 }
 
-#tqqdsusiba .gt_stub_row_group {
+#ycltvepdqo .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -425,15 +430,15 @@ div.csl-indent {
   vertical-align: top;
 }
 
-#tqqdsusiba .gt_row_group_first td {
+#ycltvepdqo .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#tqqdsusiba .gt_row_group_first th {
+#ycltvepdqo .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#tqqdsusiba .gt_summary_row {
+#ycltvepdqo .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -443,16 +448,16 @@ div.csl-indent {
   padding-right: 5px;
 }
 
-#tqqdsusiba .gt_first_summary_row {
+#ycltvepdqo .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_first_summary_row.thick {
+#ycltvepdqo .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#tqqdsusiba .gt_last_summary_row {
+#ycltvepdqo .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -462,7 +467,7 @@ div.csl-indent {
   border-bottom-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_grand_summary_row {
+#ycltvepdqo .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -472,7 +477,7 @@ div.csl-indent {
   padding-right: 5px;
 }
 
-#tqqdsusiba .gt_first_grand_summary_row {
+#ycltvepdqo .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -482,7 +487,7 @@ div.csl-indent {
   border-top-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_last_grand_summary_row_top {
+#ycltvepdqo .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -492,11 +497,11 @@ div.csl-indent {
   border-bottom-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_striped {
+#ycltvepdqo .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#tqqdsusiba .gt_table_body {
+#ycltvepdqo .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -505,7 +510,7 @@ div.csl-indent {
   border-bottom-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_footnotes {
+#ycltvepdqo .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -519,7 +524,7 @@ div.csl-indent {
   border-right-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_footnote {
+#ycltvepdqo .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -528,7 +533,7 @@ div.csl-indent {
   padding-right: 5px;
 }
 
-#tqqdsusiba .gt_sourcenotes {
+#ycltvepdqo .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -542,7 +547,7 @@ div.csl-indent {
   border-right-color: #D3D3D3;
 }
 
-#tqqdsusiba .gt_sourcenote {
+#ycltvepdqo .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -550,63 +555,63 @@ div.csl-indent {
   padding-right: 5px;
 }
 
-#tqqdsusiba .gt_left {
+#ycltvepdqo .gt_left {
   text-align: left;
 }
 
-#tqqdsusiba .gt_center {
+#ycltvepdqo .gt_center {
   text-align: center;
 }
 
-#tqqdsusiba .gt_right {
+#ycltvepdqo .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#tqqdsusiba .gt_font_normal {
+#ycltvepdqo .gt_font_normal {
   font-weight: normal;
 }
 
-#tqqdsusiba .gt_font_bold {
+#ycltvepdqo .gt_font_bold {
   font-weight: bold;
 }
 
-#tqqdsusiba .gt_font_italic {
+#ycltvepdqo .gt_font_italic {
   font-style: italic;
 }
 
-#tqqdsusiba .gt_super {
+#ycltvepdqo .gt_super {
   font-size: 65%;
 }
 
-#tqqdsusiba .gt_footnote_marks {
+#ycltvepdqo .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#tqqdsusiba .gt_asterisk {
+#ycltvepdqo .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#tqqdsusiba .gt_indent_1 {
+#ycltvepdqo .gt_indent_1 {
   text-indent: 5px;
 }
 
-#tqqdsusiba .gt_indent_2 {
+#ycltvepdqo .gt_indent_2 {
   text-indent: 10px;
 }
 
-#tqqdsusiba .gt_indent_3 {
+#ycltvepdqo .gt_indent_3 {
   text-indent: 15px;
 }
 
-#tqqdsusiba .gt_indent_4 {
+#ycltvepdqo .gt_indent_4 {
   text-indent: 20px;
 }
 
-#tqqdsusiba .gt_indent_5 {
+#ycltvepdqo .gt_indent_5 {
   text-indent: 25px;
 }
 </style>
@@ -615,243 +620,290 @@ div.csl-indent {
     
     <tr class="gt_col_headings">
       <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="compound">compound</th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="umol_per_g">umol_per_g</th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="H">H</th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="H_exchangable">H_exchangable</th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="frac_H_exc">frac_H_exc</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="group">group</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="umol per g">umol per g</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="Total H">Total H</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="H (Exchangeable)">H (Exchangeable)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="Fraction Exchangeable">Fraction Exchangeable</th>
     </tr>
   </thead>
   <tbody class="gt_table_body">
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Alanine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #0D7634; color: #FFFFFF;">488.0</td>
-<td headers="H" class="gt_row gt_right">5</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #0D7634; color: #FFFFFF;">488.0</td>
+<td headers="Total H" class="gt_row gt_right">5</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Argininie</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #7DC87D; color: #000000;">281.0</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">5</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #135BA4; color: #FFFFFF;">0.41666667</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #7DC87D; color: #000000;">281.0</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">5</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #135BA4; color: #FFFFFF;">0.41666667</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Asparagine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #9DD798; color: #000000;">229.0</td>
-<td headers="H" class="gt_row gt_right">6</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #08306B; color: #FFFFFF;">0.50000000</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #9DD798; color: #000000;">229.0</td>
+<td headers="Total H" class="gt_row gt_right">6</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #08306B; color: #FFFFFF;">0.50000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Aspartic Acid</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #9DD798; color: #000000;">229.0</td>
-<td headers="H" class="gt_row gt_right">6</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #9DD798; color: #000000;">229.0</td>
+<td headers="Total H" class="gt_row gt_right">6</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Cysteine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #E2F4DC; color: #000000;">87.0</td>
-<td headers="H" class="gt_row gt_right">5</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #1964AB; color: #FFFFFF;">0.40000000</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #E2F4DC; color: #000000;">87.0</td>
+<td headers="Total H" class="gt_row gt_right">5</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #1964AB; color: #FFFFFF;">0.40000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Glutamic acid</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #90D18D; color: #000000;">250.0</td>
-<td headers="H" class="gt_row gt_right">7</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #559ECD; color: #FFFFFF;">0.28571429</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #90D18D; color: #000000;">250.0</td>
+<td headers="Total H" class="gt_row gt_right">7</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #559ECD; color: #FFFFFF;">0.28571429</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Glutamine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #90D18D; color: #000000;">250.0</td>
-<td headers="H" class="gt_row gt_right">8</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #2171B5; color: #FFFFFF;">0.37500000</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #90D18D; color: #000000;">250.0</td>
+<td headers="Total H" class="gt_row gt_right">8</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #2171B5; color: #FFFFFF;">0.37500000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Glycine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #00441B; color: #FFFFFF;">582.0</td>
-<td headers="H" class="gt_row gt_right">3</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #00441B; color: #FFFFFF;">582.0</td>
+<td headers="Total H" class="gt_row gt_right">3</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Histidine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #E0F3DB; color: #000000;">90.0</td>
-<td headers="H" class="gt_row gt_right">7</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #559ECD; color: #FFFFFF;">0.28571429</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #E0F3DB; color: #000000;">90.0</td>
+<td headers="Total H" class="gt_row gt_right">7</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #559ECD; color: #FFFFFF;">0.28571429</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Isoleucine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #80C97F; color: #000000;">276.0</td>
-<td headers="H" class="gt_row gt_right">11</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #D3E4F3; color: #000000;">0.09090909</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #80C97F; color: #000000;">276.0</td>
+<td headers="Total H" class="gt_row gt_right">11</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #D3E4F3; color: #000000;">0.09090909</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Leucine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #288F48; color: #FFFFFF;">428.0</td>
-<td headers="H" class="gt_row gt_right">11</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #D3E4F3; color: #000000;">0.09090909</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #288F48; color: #FFFFFF;">428.0</td>
+<td headers="Total H" class="gt_row gt_right">11</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #D3E4F3; color: #000000;">0.09090909</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Lysine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #5FB96B; color: #000000;">326.0</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #6BAED6; color: #000000;">0.25000000</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #5FB96B; color: #000000;">326.0</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #6BAED6; color: #000000;">0.25000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Methionine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #C9EAC2; color: #000000;">146.0</td>
-<td headers="H" class="gt_row gt_right">9</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #CBDFF1; color: #000000;">0.11111111</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #C9EAC2; color: #000000;">146.0</td>
+<td headers="Total H" class="gt_row gt_right">9</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #CBDFF1; color: #000000;">0.11111111</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Phenylalanine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #BAE3B3; color: #000000;">176.0</td>
-<td headers="H" class="gt_row gt_right">9</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #CBDFF1; color: #000000;">0.11111111</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #BAE3B3; color: #000000;">176.0</td>
+<td headers="Total H" class="gt_row gt_right">9</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #CBDFF1; color: #000000;">0.11111111</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Proline</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #A8DCA1; color: #000000;">210.0</td>
-<td headers="H" class="gt_row gt_right">7</td>
-<td headers="H_exchangable" class="gt_row gt_right">0</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #F7FBFF; color: #000000;">0.00000000</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #A8DCA1; color: #000000;">210.0</td>
+<td headers="Total H" class="gt_row gt_right">7</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">0</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #F7FBFF; color: #000000;">0.00000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Serine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #AADDA4; color: #000000;">205.0</td>
-<td headers="H" class="gt_row gt_right">5</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #1964AB; color: #FFFFFF;">0.40000000</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #AADDA4; color: #000000;">205.0</td>
+<td headers="Total H" class="gt_row gt_right">5</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #1964AB; color: #FFFFFF;">0.40000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Threonine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #96D491; color: #000000;">241.0</td>
-<td headers="H" class="gt_row gt_right">7</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #559ECD; color: #FFFFFF;">0.28571429</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #96D491; color: #000000;">241.0</td>
+<td headers="Total H" class="gt_row gt_right">7</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #559ECD; color: #FFFFFF;">0.28571429</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Tryptophan</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #EBF7E7; color: #000000;">54.0</td>
-<td headers="H" class="gt_row gt_right">10</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #EBF7E7; color: #000000;">54.0</td>
+<td headers="Total H" class="gt_row gt_right">10</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Tyrosine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #CFECC9; color: #000000;">131.0</td>
-<td headers="H" class="gt_row gt_right">9</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #83BADB; color: #000000;">0.22222222</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #CFECC9; color: #000000;">131.0</td>
+<td headers="Total H" class="gt_row gt_right">9</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #83BADB; color: #000000;">0.22222222</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Valine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #339B51; color: #FFFFFF;">402.0</td>
-<td headers="H" class="gt_row gt_right">9</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #CBDFF1; color: #000000;">0.11111111</td></tr>
+<td headers="group" class="gt_row gt_left">Protein</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #339B51; color: #FFFFFF;">402.0</td>
+<td headers="Total H" class="gt_row gt_right">9</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #CBDFF1; color: #000000;">0.11111111</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">AMP</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #C0E6B9; color: #000000;">165.0</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">4</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
+<td headers="group" class="gt_row gt_left">RNA</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #C0E6B9; color: #000000;">165.0</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">4</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">GMP</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #ACDDA5; color: #000000;">203.0</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">5</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #135BA4; color: #FFFFFF;">0.41666667</td></tr>
+<td headers="group" class="gt_row gt_left">RNA</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #ACDDA5; color: #000000;">203.0</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">5</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #135BA4; color: #FFFFFF;">0.41666667</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">CMP</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #D1EDCB; color: #000000;">126.0</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">4</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
+<td headers="group" class="gt_row gt_left">RNA</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #D1EDCB; color: #000000;">126.0</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">4</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">UMP</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #CDEBC7; color: #000000;">136.0</td>
-<td headers="H" class="gt_row gt_right">11</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #A2CCE2; color: #000000;">0.18181818</td></tr>
+<td headers="group" class="gt_row gt_left">RNA</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #CDEBC7; color: #000000;">136.0</td>
+<td headers="Total H" class="gt_row gt_right">11</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #A2CCE2; color: #000000;">0.18181818</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">dAMP</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F3FAF0; color: #000000;">24.6</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #6BAED6; color: #000000;">0.25000000</td></tr>
+<td headers="group" class="gt_row gt_left">DNA</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F3FAF0; color: #000000;">24.6</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #6BAED6; color: #000000;">0.25000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">dGMP</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.4</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">4</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
+<td headers="group" class="gt_row gt_left">DNA</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.4</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">4</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">dCMP</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.4</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #6BAED6; color: #000000;">0.25000000</td></tr>
+<td headers="group" class="gt_row gt_left">DNA</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.4</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #6BAED6; color: #000000;">0.25000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">dTMP</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F3FAF0; color: #000000;">24.6</td>
-<td headers="H" class="gt_row gt_right">13</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #B4D3E9; color: #000000;">0.15384615</td></tr>
+<td headers="group" class="gt_row gt_left">DNA</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F3FAF0; color: #000000;">24.6</td>
+<td headers="Total H" class="gt_row gt_right">13</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #B4D3E9; color: #000000;">0.15384615</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Phosphatidylglycerol</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F1FAEE; color: #000000;">32.0</td>
-<td headers="H" class="gt_row gt_right">70</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #E6F0FA; color: #000000;">0.04285714</td></tr>
+<td headers="group" class="gt_row gt_left">Lipid</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F1FAEE; color: #000000;">32.0</td>
+<td headers="Total H" class="gt_row gt_right">70</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #E6F0FA; color: #000000;">0.04285714</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Phosphatidylethanolamine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #DDF2D8; color: #000000;">97.0</td>
-<td headers="H" class="gt_row gt_right">72</td>
-<td headers="H_exchangable" class="gt_row gt_right">4</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #E1EDF8; color: #000000;">0.05555556</td></tr>
+<td headers="group" class="gt_row gt_left">Lipid</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #DDF2D8; color: #000000;">97.0</td>
+<td headers="Total H" class="gt_row gt_right">72</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">4</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #E1EDF8; color: #000000;">0.05555556</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Glucose</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F5FBF2; color: #000000;">16.8</td>
-<td headers="H" class="gt_row gt_right">10</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #4B98C9; color: #FFFFFF;">0.30000000</td></tr>
+<td headers="group" class="gt_row gt_left">LPS</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F5FBF2; color: #000000;">16.8</td>
+<td headers="Total H" class="gt_row gt_right">10</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #4B98C9; color: #FFFFFF;">0.30000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Ethanolamine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.2</td>
-<td headers="H" class="gt_row gt_right">5</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
+<td headers="group" class="gt_row gt_left">LPS</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.2</td>
+<td headers="Total H" class="gt_row gt_right">5</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Glucosamine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F5FBF2; color: #000000;">16.8</td>
-<td headers="H" class="gt_row gt_right">9</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #83BADB; color: #000000;">0.22222222</td></tr>
+<td headers="group" class="gt_row gt_left">LPS</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F5FBF2; color: #000000;">16.8</td>
+<td headers="Total H" class="gt_row gt_right">9</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #83BADB; color: #000000;">0.22222222</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Rhamnose</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F7FCF5; color: #000000;">8.4</td>
-<td headers="H" class="gt_row gt_right">10</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
+<td headers="group" class="gt_row gt_left">LPS</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F7FCF5; color: #000000;">8.4</td>
+<td headers="Total H" class="gt_row gt_right">10</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Heptose</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.2</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">4</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
+<td headers="group" class="gt_row gt_left">LPS</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.2</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">4</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Hydroxymyristic acid</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F0F9ED; color: #000000;">33.6</td>
-<td headers="H" class="gt_row gt_right">18</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #E1EDF8; color: #000000;">0.05555556</td></tr>
+<td headers="group" class="gt_row gt_left">LPS</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F0F9ED; color: #000000;">33.6</td>
+<td headers="Total H" class="gt_row gt_right">18</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #E1EDF8; color: #000000;">0.05555556</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">C14:0 Fatty Acid</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F5FBF2; color: #000000;">16.8</td>
-<td headers="H" class="gt_row gt_right">27</td>
-<td headers="H_exchangable" class="gt_row gt_right">0</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #F7FBFF; color: #000000;">0.00000000</td></tr>
+<td headers="group" class="gt_row gt_left">LPS</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F5FBF2; color: #000000;">16.8</td>
+<td headers="Total H" class="gt_row gt_right">27</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">0</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #F7FBFF; color: #000000;">0.00000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">KDO</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.2</td>
-<td headers="H" class="gt_row gt_right">11</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #5DA4D0; color: #FFFFFF;">0.27272727</td></tr>
+<td headers="group" class="gt_row gt_left">LPS</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAF0; color: #000000;">25.2</td>
+<td headers="Total H" class="gt_row gt_right">11</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #5DA4D0; color: #FFFFFF;">0.27272727</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Diaminopimelic acid</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAEF; color: #000000;">27.6</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">4</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
+<td headers="group" class="gt_row gt_left">Peptidoglycan</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAEF; color: #000000;">27.6</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">4</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">N-Acetylglucosamine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAEF; color: #000000;">27.6</td>
-<td headers="H" class="gt_row gt_right">13</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #7CB7D9; color: #000000;">0.23076923</td></tr>
+<td headers="group" class="gt_row gt_left">Peptidoglycan</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAEF; color: #000000;">27.6</td>
+<td headers="Total H" class="gt_row gt_right">13</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #7CB7D9; color: #000000;">0.23076923</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">N-Acetylmuramic acid</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAEF; color: #000000;">27.6</td>
-<td headers="H" class="gt_row gt_right">17</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #A5CDE3; color: #000000;">0.17647059</td></tr>
+<td headers="group" class="gt_row gt_left">Peptidoglycan</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAEF; color: #000000;">27.6</td>
+<td headers="Total H" class="gt_row gt_right">17</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #A5CDE3; color: #000000;">0.17647059</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Alanine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #EBF7E7; color: #000000;">55.2</td>
-<td headers="H" class="gt_row gt_right">5</td>
-<td headers="H_exchangable" class="gt_row gt_right">1</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
+<td headers="group" class="gt_row gt_left">Peptidoglycan</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #EBF7E7; color: #000000;">55.2</td>
+<td headers="Total H" class="gt_row gt_right">5</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">1</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #94C4DF; color: #000000;">0.20000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Glutamic acid</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F2FAEF; color: #000000;">27.6</td>
-<td headers="H" class="gt_row gt_right">7</td>
-<td headers="H_exchangable" class="gt_row gt_right">2</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #559ECD; color: #FFFFFF;">0.28571429</td></tr>
+<td headers="group" class="gt_row gt_left">Peptidoglycan</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F2FAEF; color: #000000;">27.6</td>
+<td headers="Total H" class="gt_row gt_right">7</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">2</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #559ECD; color: #FFFFFF;">0.28571429</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Glucose</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #C5E8BE; color: #000000;">154.0</td>
-<td headers="H" class="gt_row gt_right">10</td>
-<td headers="H_exchangable" class="gt_row gt_right">3</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #4B98C9; color: #FFFFFF;">0.30000000</td></tr>
+<td headers="group" class="gt_row gt_left">Glycogen</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #C5E8BE; color: #000000;">154.0</td>
+<td headers="Total H" class="gt_row gt_right">10</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">3</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #4B98C9; color: #FFFFFF;">0.30000000</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Putrescine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F0F9ED; color: #000000;">34.1</td>
-<td headers="H" class="gt_row gt_right">12</td>
-<td headers="H_exchangable" class="gt_row gt_right">4</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
+<td headers="group" class="gt_row gt_left">Polyamines</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F0F9ED; color: #000000;">34.1</td>
+<td headers="Total H" class="gt_row gt_right">12</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">4</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #3987C0; color: #FFFFFF;">0.33333333</td></tr>
     <tr><td headers="compound" class="gt_row gt_left" style="font-weight: bold;">Spermidine</td>
-<td headers="umol_per_g" class="gt_row gt_right" style="background-color: #F7FCF5; color: #000000;">7.0</td>
-<td headers="H" class="gt_row gt_right">19</td>
-<td headers="H_exchangable" class="gt_row gt_right">5</td>
-<td headers="frac_H_exc" class="gt_row gt_right" style="background-color: #63A8D3; color: #FFFFFF;">0.26315789</td></tr>
+<td headers="group" class="gt_row gt_left">Polyamines</td>
+<td headers="umol per g" class="gt_row gt_right" style="background-color: #F7FCF5; color: #000000;">7.0</td>
+<td headers="Total H" class="gt_row gt_right">19</td>
+<td headers="H (Exchangeable)" class="gt_row gt_right">5</td>
+<td headers="Fraction Exchangeable" class="gt_row gt_right" style="background-color: #63A8D3; color: #FFFFFF;">0.26315789</td></tr>
   </tbody>
   
   
@@ -892,17 +944,19 @@ div.csl-indent {
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">labels =</span> scales<span class="sc">::</span>percent) <span class="sc">+</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Mole %"</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Mole %"</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.title.y =</span> <span class="fu">element_blank</span>(),</span>
 <span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.title =</span> <span class="fu">element_blank</span>(),</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">"left"</span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>p_mole_frac</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">color =</span> <span class="st">"black"</span>),</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">"None"</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>p_mole_frac</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="04_molecules_H_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="576"></p>
@@ -976,15 +1030,15 @@ H_{total} &amp;= H_{ex} + H_{non}
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>molecule_H_calc <span class="sc">|&gt;</span> </span>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>p_umol_g <span class="ot">&lt;-</span> molecule_H_calc <span class="sc">|&gt;</span> </span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(compound, group, umol_Hex_per_g, umol_Hnon_per_g) <span class="sc">|&gt;</span> </span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(umol_Hnon_per_g, umol_Hex_per_g),</span>
 <span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">"source"</span>, <span class="at">values_to =</span> <span class="st">"umol_per_g"</span>) <span class="sc">|&gt;</span> </span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">source =</span> <span class="fu">if_else</span>(</span>
 <span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>      source <span class="sc">==</span> <span class="st">"umol_Hnon_per_g"</span>,</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">true =</span> <span class="st">"H_nonexchangeable"</span>,</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">false =</span> <span class="st">"H_exchangeable"</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">true =</span> <span class="st">"Non-Exchangeable"</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">false =</span> <span class="st">"Exchangeable"</span></span>
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    )</span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
 <span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">compound =</span> <span class="fu">fct_reorder</span>(<span class="at">.f =</span> compound, <span class="at">.x =</span> umol_per_g)) <span class="sc">|&gt;</span> </span>
@@ -994,16 +1048,21 @@ H_{total} &amp;= H_{ex} + H_{non}
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> compound,</span>
 <span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> source</span>
 <span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"µmol / g"</span></span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">"top"</span>,</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.title =</span> <span class="fu">element_blank</span>(),</span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.title.y =</span> <span class="fu">element_blank</span>()</span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"#3498eb"</span>, <span class="st">"black"</span>)) <span class="sc">+</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">expand =</span> <span class="cn">FALSE</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">7800</span>)) <span class="sc">+</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"µmol / g"</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">"top"</span>,</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.title =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.title.y =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">color =</span> <span class="st">"black"</span>)</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>p_umol_g</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="04_molecules_H_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
@@ -1013,7 +1072,7 @@ H_{total} &amp;= H_{ex} + H_{non}
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>molecule_H_calc <span class="sc">|&gt;</span> </span>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>p_frac_exch <span class="ot">&lt;-</span> molecule_H_calc <span class="sc">|&gt;</span> </span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">frac_nHex =</span> umol_Hex_per_g <span class="sc">/</span> umol_Htot_per_g) <span class="sc">|&gt;</span> </span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">compound =</span> <span class="fu">fct_reorder</span>(<span class="at">.f =</span> compound, <span class="at">.x =</span> frac_nHex)) <span class="sc">|&gt;</span> </span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
@@ -1030,38 +1089,77 @@ H_{total} &amp;= H_{ex} + H_{non}
 <span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Fraction of Exchangeable H"</span>,</span>
 <span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">""</span>,</span>
 <span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> <span class="st">""</span></span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">panel.grid =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">color =</span> <span class="st">"black"</span>)</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>p_frac_exch</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="04_molecules_H_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
 </div>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>cowplot<span class="sc">::</span><span class="fu">save_plot</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">filename =</span> <span class="st">"fig_output/frac_exch.pdf"</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">plot =</span> p_frac_exch,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">base_height =</span> <span class="dv">6</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">base_width =</span> <span class="dv">7</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 </div>
 <p>And here we examine the relative contributions of fractional H by each component of the cell:</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>molecule_H_calc <span class="sc">|&gt;</span> </span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">compound =</span> <span class="fu">fct_reorder</span>(<span class="at">.f =</span> compound, <span class="at">.x =</span> umol_Hex_per_g)) <span class="sc">|&gt;</span> </span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">aes</span>(</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> umol_Hex_per_g,</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> compound,</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> group</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="st">"dodge"</span>) <span class="sc">+</span></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"µmol exchangeable H / g"</span>,</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">""</span>,</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> <span class="st">""</span></span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>molecule_H_calc <span class="sc">|&gt;</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">compound =</span> <span class="fu">fct_reorder</span>(<span class="at">.f =</span> compound, <span class="at">.x =</span> umol_Hex_per_g)) <span class="sc">|&gt;</span> </span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">aes</span>(</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> umol_Hex_per_g,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> compound,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> group</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="st">"dodge"</span>) <span class="sc">+</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"µmol exchangeable H / g"</span>,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">""</span>,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">fill =</span> <span class="st">""</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="04_molecules_H_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-
 </section>
+</section>
+<section id="make-a-nice-supplementary-figure" class="level1">
+<h1>Make a nice supplementary figure:</h1>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>p_combined_plot <span class="ot">&lt;-</span> cowplot<span class="sc">::</span><span class="fu">plot_grid</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  p_mole_frac, p_frac_exch, p_umol_g,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"C"</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>p_combined_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="04_molecules_H_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
+</div>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># cowplot::save_plot(</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   filename = "fig_output/all_the_molecules.pdf",</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   plot = p_combined_plot,</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   base_height = 12,</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   base_width = 10</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co"># )</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
