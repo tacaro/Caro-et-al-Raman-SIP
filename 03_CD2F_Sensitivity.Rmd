@@ -20,6 +20,8 @@ rm(list=ls())
 library(tidyverse)
 library(geomtextpath)
 library(plotly)
+library(patchwork)
+library(ggpp)
 ```
 
 ## Functions
@@ -86,7 +88,9 @@ test_dataset <- tibble(
 
 
 
-### Define plotting function
+# Define Plotting Functions
+
+## RE vs. gen_time
 
 ```{r}
 plot_rel_error <- function(test_dataset, d_t, f_label, xlimits, include_legend = TRUE, include_caption = TRUE) {
@@ -118,6 +122,17 @@ plot_rel_error <- function(test_dataset, d_t, f_label, xlimits, include_legend =
     pull(mu.d) |> 
     max()
   
+  # find the error minima (optima)
+  minimums <- test_dataset |> 
+    filter(dt == d_t) |> 
+    group_by(FL) |> 
+    filter(rel_error == min(rel_error))
+  
+  minimum_label <- minimums |>
+    filter(FL > 15) |> 
+    filter(FL == f_label) |> 
+    pull(TD.days)
+  
   test_dataset %>%
     # Argument input here to filter dataset to correct incubation time:
     filter(dt == d_t) |> 
@@ -128,46 +143,70 @@ plot_rel_error <- function(test_dataset, d_t, f_label, xlimits, include_legend =
       y = rel_error,
       color = as.factor(FL)
     ) +
-    annotate(geom = "segment", x = lower_lim, xend = lower_lim, y = 0, yend = 0.5, color = "gray") +
-    annotate(geom = "segment", x = upper_lim, xend = upper_lim, y = 0, yend = 0.5, color = "gray") +
-    #annotate(geom = "label", x = upper_lim, y = 0.1, color = "black", label = paste0(round(upper_lim, 1), " d")) +
-    #annotate(geom = "label", x = lower_lim, y = 0.1, color = "black", label = paste0(round(lower_lim, 1), " d")) +
+    annotate(
+      geom = "segment", x = lower_lim, xend = lower_lim, 
+      y = 0, yend = 0.5, color = "gray"
+      ) +
+    annotate(
+      geom = "segment", x = upper_lim, xend = upper_lim, 
+      y = 0, yend = 0.5, color = "gray"
+      ) +
+    annotation_custom(grid::textGrob(paste("dt =", d_t, "days"), 0.80, 0.2)) +
+    geom_segment(
+      data = minimums |> filter(FL > 15) |> filter(FL == f_label),
+      aes(
+        x = TD.days,
+        xend = TD.days,
+        y = 0,
+        yend = 50,
+        color = as.factor(FL)
+      ),
+      alpha = 0.7
+    ) +
     geom_line(linewidth = 1) +
+    geom_point(
+      data = minimums |> filter(FL > 15),
+      aes(fill = as.factor(FL)),
+      shape = 21,
+      color = "black",
+      show.legend = FALSE,
+      size = 2.5,
+      stroke = 1
+    ) +
     scale_color_viridis_d(option = "plasma", begin = 0.1, end = 0.9) +
+    scale_fill_viridis_d(option = "plasma", begin = 0.1, end = 0.9) +
     # Secondary axis with ticks marked
     scale_x_continuous(
       sec.axis = dup_axis(
-        breaks = c(round(upper_lim, 1), round(lower_lim, 1))
+        breaks = c(round(upper_lim, 1), round(minimum_label, 1), round(lower_lim, 1))
       )
     ) +
-    # Secondary axis with growth rate:
-    # scale_x_continuous(
-    #   sec.axis = sec_axis(~ log(2)/., breaks = c(0.1, 0.01, 0.002)),
-    #   
-    #   ) +
     scale_y_continuous(labels = scales::percent) + 
     coord_cartesian(
       ylim = c(0, 0.5),
       xlim = xlimits,
       expand = FALSE
     ) +
+    ggprism::annotation_ticks(sides = "bl") +
     labs(
       x = "Generation Time (Days)",
-      y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
-      color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
-      title = paste(d_t, "day incubation time"),
+      y = "Relative Error",
+      color = latex2exp::TeX("Label Enrichment ($^{2}F_L$ at. %)"),
       caption = if_else(include_caption, paste(
         "Quantification of growth: \n",
-        "Generation times: between", round(upper_lim, 1), "and", round(lower_lim, 1), "days, \n",
-        "Growth rate: between", round(lower_lim_mu_d, 3), "and", round(upper_lim_mu_d, 3), "days ^-1"
-        ),
-        "")
+        "Generation times: between", round(upper_lim, 1), "and",
+        round(lower_lim, 1), "days, \n",
+        "Growth rate: between", round(lower_lim_mu_d, 3), "and",
+        round(upper_lim_mu_d, 3), "days ^-1"),"")
     ) +
-    theme_classic() +
+    theme_bw() +
     theme(
       legend.position = if_else(include_legend, "bottom", "NA"),
       axis.text.x.top = element_text(angle = 45, hjust = 0),
       axis.title.x.top = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text = element_text(color = "black", face = "bold")
       #panel.border = element_rect(color = "black", size = 2, fill = NA),
       #axis.ticks = element_line(linewidth = 1)
     )
@@ -177,14 +216,14 @@ plot_rel_error <- function(test_dataset, d_t, f_label, xlimits, include_legend =
 plot_rel_error(
   test_dataset = test_dataset,
   d_t = 30,
-  xlimits = c(0,1000),
-  f_label = 30,
+  xlimits = c(0,175),
+  f_label = 35,
   include_legend = TRUE,
   include_caption = TRUE
 )
 ```
 
-## Plot Rel Error Vs. µ
+## RE Vs. µ [deprecated]
 
 ```{r}
 plot_rel_error_mu <- function(test_dataset, d_t, f_label, xlimits, include_legend = TRUE, include_caption = TRUE) {
@@ -272,105 +311,12 @@ plot_rel_error_mu <- function(test_dataset, d_t, f_label, xlimits, include_legen
 }
 ```
 
-
-
-## Plot Rel Error Vs. Generation Time
-
-```{r}
-#dt = c(1, 5, 7, 30, 60, 100),
-
-# get the legend
-rel_error_legend <- cowplot::get_legend(plot_rel_error(
-  test_dataset = test_dataset,
-  d_t = 1,
-  xlimits = c(0,600),
-  f_label = 30,
-  include_legend = TRUE))
-
-rel_error_grid <- cowplot::plot_grid(
-  plot_rel_error(test_dataset = test_dataset,
-                 d_t = 1,
-                 xlimits = c(0,50),
-                 f_label = 30,
-                 include_legend = FALSE, include_caption = FALSE),
-  plot_rel_error(test_dataset = test_dataset,
-                 d_t = 5,
-                 xlimits = c(0,50),
-                 f_label = 30,
-                 include_legend = FALSE, include_caption = FALSE),
-  plot_rel_error(test_dataset = test_dataset,
-                 d_t = 10,
-                 xlimits = c(0,50),
-                 f_label = 30,
-                 include_legend = FALSE, include_caption = FALSE),
-  plot_rel_error(test_dataset = test_dataset,
-                 d_t = 30,
-                 xlimits = c(0,600),
-                 f_label = 30,
-                 include_legend = FALSE, include_caption = FALSE),
-  plot_rel_error(test_dataset = test_dataset,
-                 d_t = 60,
-                 xlimits = c(0,600),
-                 f_label = 30,
-                 include_legend = FALSE, include_caption = FALSE),
-  plot_rel_error(test_dataset = test_dataset,
-                 d_t = 100,
-                 xlimits = c(0,600),
-                 f_label = 30,
-                 include_legend = FALSE, include_caption = FALSE),
-  ncol = 2,
-  byrow = FALSE
-)
-
-rel_error_grid_w_legend <- cowplot::plot_grid(
-  # the plot we just made:
-  rel_error_grid,
-  # add the legend to the bottom:
-  rel_error_legend,
-  ncol = 1,
-  rel_heights = c(1, 0.1)
-)
-
-rel_error_grid_w_legend
-# 
-# cowplot::save_plot(
-#   filename = "fig_output/rel_error_grid_w_legend.pdf",
-#   plot = rel_error_grid_w_legend,
-#   base_height = 9, 
-#   base_width = 14
-#   )
-
-```
-
-
-## Plot Growth
-
-```{r}
-test_dataset |> 
-  mutate(
-    quant = if_else(
-      rel_error < 0.5,
-      TRUE,
-      FALSE
-    )
-  ) |> 
-  filter(dt == 30) |>
-  ggplot() +
-  aes(
-    x = F2,
-    y = mu.d,
-    color = quant
-  ) +
-  geom_point() +
-  facet_wrap(vars(FL))
-```
-
-
-
-## Plot Rel Error vs. 2F
+## RE vs. 2F
 
 ```{r}
 plot_rel_error_at2H <- function(test_dataset, d_t, f_label, xlimits, include_legend = TRUE, include_caption = TRUE) {
+  
+  # find upper lim 2F
   upper_lim <- test_dataset |> 
     filter(dt == d_t) |> 
     filter(rel_error <= 0.5) |>
@@ -378,6 +324,7 @@ plot_rel_error_at2H <- function(test_dataset, d_t, f_label, xlimits, include_leg
     pull(F2) |> 
     min()
   
+  # find upper lim growth rate
   upper_lim_mu_d <- test_dataset |> 
     filter(dt == d_t) |> 
     filter(rel_error <= 0.5) |>
@@ -385,6 +332,7 @@ plot_rel_error_at2H <- function(test_dataset, d_t, f_label, xlimits, include_leg
     pull(mu.d) |> 
     min()
   
+  # find lower lim 2F
   lower_lim <- test_dataset |> 
     filter(dt == d_t) |> 
     filter(rel_error <= 0.5) |>
@@ -392,12 +340,24 @@ plot_rel_error_at2H <- function(test_dataset, d_t, f_label, xlimits, include_leg
     pull(F2) |> 
     max()
   
+  # find lower lim growth rate
   lower_lim_mu_d <- test_dataset |> 
     filter(dt == d_t) |> 
     filter(rel_error <= 0.5) |>
     filter(FL == f_label) |> 
     pull(mu.d) |> 
     max()
+  
+  # find the error minima (optima)
+  minimums <- test_dataset |> 
+    filter(dt == d_t) |> 
+    group_by(FL) |> 
+    filter(rel_error == min(rel_error))
+  
+  minimum_label <- minimums |>
+    filter(FL > 15) |> 
+    filter(FL == f_label) |> 
+    pull(F2)
 
   
   test_dataset %>%
@@ -410,59 +370,78 @@ plot_rel_error_at2H <- function(test_dataset, d_t, f_label, xlimits, include_leg
       y = rel_error,
       color = as.factor(FL)
     ) +
-    annotate(geom = "segment", x = lower_lim, xend = lower_lim, y = 0, yend = 0.5, color = "gray") +
-    annotate(geom = "segment", x = upper_lim, xend = upper_lim, y = 0, yend = 0.5, color = "gray") +
-    #annotate(geom = "label", x = upper_lim, y = 0.1, color = "black", label = paste0(round(upper_lim, 1), " d")) +
-    #annotate(geom = "label", x = lower_lim, y = 0.1, color = "black", label = paste0(round(lower_lim, 1), " d")) +
+    annotate(
+      geom = "segment", x = lower_lim, xend = lower_lim,
+      y = 0, yend = 0.5, color = "gray") +
+    annotate(
+      geom = "segment", 
+      x = upper_lim, xend = upper_lim, 
+      y = 0, yend = 0.5, color = "gray") +
     geom_line(linewidth = 1) +
+    geom_segment(
+      data = minimums |> filter(FL > 15) |> filter(FL == f_label),
+      aes(
+        x = F2,
+        xend = F2,
+        y = 0,
+        yend = 50,
+        color = as.factor(FL)
+      ),
+      alpha = 0.7
+    ) +
+    geom_point(
+      data = minimums |> filter(FL > 15),
+      aes(fill = as.factor(FL)),
+      shape = 21,
+      color = "black",
+      show.legend = FALSE,
+      size = 2.5,
+      stroke = 1
+    ) +
     scale_color_viridis_d(end = 0.9) +
+    scale_fill_viridis_d(end = 0.9) +
     # Secondary axis with ticks marked
     scale_x_continuous(
       sec.axis = dup_axis(
-        breaks = c(round(upper_lim, 1), round(lower_lim, 1))
-      )
+        breaks = c(round(upper_lim, 1), 
+                   round(minimum_label, 1), 
+                   round(lower_lim, 1)),
+        labels = scales::label_percent(scale = 1)
+      ),
+      labels = scales::label_percent(scale = 1)
     ) +
-    # Secondary axis with growth rate:
-    # scale_x_continuous(
-    #   sec.axis = sec_axis(~ log(2)/., breaks = c(0.1, 0.01, 0.002)),
-    #   
-    #   ) +
-    scale_y_continuous(labels = scales::percent) + 
+    scale_y_continuous(labels = scales::label_percent()) + 
     coord_cartesian(
       ylim = c(0, 0.5),
       xlim = xlimits,
       expand = FALSE
     ) +
+    ggprism::annotation_ticks(sides = "bl") +
     labs(
       x = latex2exp::TeX("$^2F$ (at. %)"),
-      y = latex2exp::TeX("Relative Error (%) =     $\\frac{\\sigma_{\\mu}}{\\mu}$"),
-      color = latex2exp::TeX("Tracer Strength $^{2}H \\%$"),
-      title = paste(d_t, "day incubation time"),
+      y = "Relative Error",
+      color = latex2exp::TeX("Label Enrichment ($^{2}F_L$ at. %)"),
+      title = latex2exp::TeX("$^2F$ quantification range"),
       caption = if_else(include_caption, paste(
         "Range of quantification: \n",
-        "CD% values: ", round(upper_lim, 1), "-", round(lower_lim, 1), "%, \n",
-        "Growth rate: ", round(lower_lim_mu_d, 3), "-", round(upper_lim_mu_d, 3), "days^-1"
-        ),
-        "")
+        "CD% values: ", round(upper_lim, 1), "-",
+        round(lower_lim, 1), "%, \n",
+        "Growth rate: ", round(lower_lim_mu_d, 3), "-", 
+        round(upper_lim_mu_d, 3), "days^-1"),"")
     ) +
-    theme_classic() +
+    theme_bw() +
     theme(
+      panel.grid = element_blank(),
+      axis.text = element_text(color = "black", face = "bold"),
       legend.position = if_else(include_legend, "bottom", "NA"),
       axis.text.x.top = element_text(angle = 45, hjust = 0),
       axis.title.x.top = element_blank(),
-      #panel.border = element_rect(color = "black", size = 2, fill = NA),
-      #axis.ticks = element_line(linewidth = 1)
+      plot.margin = margin(0.5,0.5,0.5,0.5, "cm")
     )
 }
  
 
-```
-
-# Generate Nice Plots
-```{r}
-
-
-panel_a <- plot_rel_error_at2H(
+plot_rel_error_at2H(
   test_dataset = test_dataset,
   d_t = 30,
   xlimits = c(0,50),
@@ -471,30 +450,131 @@ panel_a <- plot_rel_error_at2H(
   include_caption = TRUE
 )
 
-panel_b <-plot_rel_error(
+```
+
+# Generate Nice Plots
+```{r}
+
+# range of quant
+panel_a <- plot_rel_error_at2H(
   test_dataset = test_dataset,
   d_t = 30,
-  xlimits = c(0,150),
+  xlimits = c(0,50),
   f_label = 35,
   include_legend = TRUE,
-  include_caption = TRUE
+  include_caption = FALSE
 )
 
-combined <- cowplot::plot_grid(
-  panel_a,
-  panel_b,
-  ncol = 2
+# dt = 5 days
+panel_b <- plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 5,
+  xlimits = c(0,50),
+  f_label = 35,
+  include_legend = FALSE,
+  include_caption = FALSE
 )
+
+# dt = 30 days
+panel_c <- plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 30,
+  xlimits = c(0,175),
+  f_label = 35,
+  include_legend = TRUE,
+  include_caption = FALSE
+)
+
+
+combined <- panel_a + (panel_b / panel_c)
 
 combined
 
 cowplot::save_plot(
   plot = combined,
-  filename = "fig_output/figure2.pdf",
-  base_height = 6,
-  base_width = 10
+  filename = "fig_output/figure3.pdf",
+  base_height = 7,
+  base_width = 12
 )
  
+```
+
+# Supp Fig. Multiple dt
+
+```{r}
+dt1 <- plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 1,
+  xlimits = c(0,7),
+  f_label = 35,
+  include_legend = FALSE,
+  include_caption = FALSE
+)
+
+
+dt5 <- plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 5,
+  xlimits = c(0,45),
+  f_label = 35,
+  include_legend = FALSE,
+  include_caption = FALSE
+)
+
+
+
+dt7 <- plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 7,
+  xlimits = c(0,45),
+  f_label = 35,
+  include_legend = FALSE,
+  include_caption = FALSE
+)
+
+
+dt30 <- plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 30,
+  xlimits = c(0,205),
+  f_label = 35,
+  include_legend = FALSE,
+  include_caption = FALSE
+)
+
+
+dt60 <- plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 60,
+  xlimits = c(0,350),
+  f_label = 35,
+  include_legend = FALSE,
+  include_caption = FALSE
+)
+
+
+dt100 <- plot_rel_error(
+  test_dataset = test_dataset,
+  d_t = 100,
+  xlimits = c(0,550),
+  f_label = 35,
+  include_legend = FALSE,
+  include_caption = FALSE
+)
+
+p_supp_dt <- cowplot::plot_grid(
+  dt1, dt5, dt7, dt30, dt60, dt100,
+  ncol = 2
+)
+p_supp_dt
+
+cowplot::save_plot(
+  filename = "fig_output/supp_dt.pdf",
+  plot = p_supp_dt,
+  base_height = 10,
+  base_width = 12
+)
+
 ```
 
 
