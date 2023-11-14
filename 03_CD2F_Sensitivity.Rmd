@@ -577,6 +577,165 @@ cowplot::save_plot(
 
 ```
 
+# FT vs. t
+
+```{r}
+calculate_FT <- function(a = 1, FL, mu, t, F0) {
+  e = exp(1) # define euler's number
+  return(
+    a * FL * (1 - e^(-mu * t)) + F0 * e^(-mu * t)
+  )
+}
+
+```
+
+```{r}
+test_dataset_2 <- 
+  crossing(
+    a = c(0.1, 0.3, 0.5, 0.7, 0.9),
+    FL = c(10, 20, 30, 35, 40, 50),
+    mu = c(0.05, 0.13),
+    t = seq(0, 1000, by = 1)
+  ) |> 
+  mutate(
+    FT = calculate_FT(
+      a = a,
+      FL = FL,
+      F0 = 0,
+      mu = mu,
+      t = t
+    ),
+    aFL = a * FL
+  )
+```
+
+```{r}
+p_FT_vs_a <- test_dataset_2 |> 
+  filter(FL == 35) |> 
+  ggplot(
+    aes(
+      x = t,
+      y = FT,
+      color = as.factor(a)
+    )
+  ) +
+  geom_hline(aes(yintercept = aFL, color = as.factor(a)), alpha = 0.3, linetype = "dashed") +
+  geom_line() +
+  facet_wrap(vars(as.factor(mu)), scales = "free_y") +
+  coord_cartesian(xlim = c(0, 80), ylim = c(0, 33), expand = FALSE) +
+  scale_color_viridis_d(option = "plasma", begin = 0, end = 0.8) +
+  labs(
+    x = latex2exp::TeX("\\Delta t"),
+    y = latex2exp::TeX("$^{2}F_{biomass}$"),
+    color = latex2exp::TeX("$a_{w}$"),
+    linetype = latex2exp::TeX("$\\mu$")
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    strip.text = element_text(color = "white"),
+    strip.background = element_rect(fill = "black"),
+    axis.text = element_text(face = "bold", color = "black"),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "bottom",
+    aspect.ratio = 1
+  )
+p_FT_vs_a
+
+cowplot::save_plot(
+  plot = p_FT,
+  filename = "fig_output/p_FT.pdf",
+  base_height = 5,
+  base_width = 7
+)
+```
+
+```{r}
+p_FT_vs_FL <- test_dataset_2 |> 
+  filter(a == 0.7) |> 
+  ggplot(
+    aes(
+      x = t,
+      y = FT,
+      color = as.factor(FL)
+    )
+  ) +
+  geom_hline(aes(yintercept = aFL, color = as.factor(FL)), alpha = 0.3, linetype = "dashed") +
+  geom_line() +
+  facet_wrap(vars(as.factor(mu)), scales = "free_y") +
+  coord_cartesian(xlim = c(0, 80), ylim = c(0, 40), expand = FALSE) +
+  scale_color_manual(values = ggpubfigs::friendly_pal("bright_seven")) +
+  labs(
+    x = latex2exp::TeX("\\Delta t"),
+    y = latex2exp::TeX("$^{2}F_{biomass}$"),
+    color = latex2exp::TeX("$F_{L}$"),
+    linetype = latex2exp::TeX("$\\mu$")
+  ) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(),
+    strip.text = element_text(color = "white"),
+    strip.background = element_rect(fill = "black"),
+    axis.text = element_text(face = "bold", color = "black"),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "top",
+    aspect.ratio = 1
+  )
+p_FT_vs_FL
+
+cowplot::save_plot(
+  plot = p_FT_vs_FL,
+  filename = "fig_output/p_FT_vs_FL.pdf",
+  base_height = 5,
+  base_width = 5
+)
+```
+
+
+```{r}
+p_FT_schematic <- test_dataset_2 |> 
+  filter(FL == 50, mu == 0.05, !a %in% c(0.1, 0.3, 0.5, 0.9)) |>
+  ggplot(
+    aes(
+      x = t,
+      y = FT,
+      color = as.factor(a)
+    )
+  ) +
+  geom_hline(
+    aes(
+      yintercept = aFL,
+      color = as.factor(a)),
+    alpha = 0.3, 
+    linetype = "dashed"
+    ) +
+  geom_line(linewidth = 1.5) +
+  coord_cartesian(xlim = c(0, 90), ylim = c(0, 33), expand = FALSE) +
+  scale_color_viridis_d(option = "plasma", begin = 0.3, end = 0.8) +
+  labs(
+    x = latex2exp::TeX("\\Delta t"),
+    y = latex2exp::TeX("$^{2}F_{biomass}$"),
+    color = latex2exp::TeX("$a_{w}$"),
+    linetype = latex2exp::TeX("$\\mu$")
+  ) +
+  theme_bw() +
+  theme(
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    aspect.ratio = 1,
+    legend.position = "none"
+  )
+p_FT_schematic
+
+cowplot::save_plot(
+  plot = p_FT_schematic,
+  filename = "fig_output/p_FT_schematic.pdf",
+  base_height = 4,
+  base_width = 4
+)
+```
+
 
 
 # Assess multiple sources of uncertainty
@@ -690,13 +849,13 @@ p_rel_error_all <- model_data %>%
   )
 
 p_rel_error_all
-
-cowplot::save_plot(
-  plot = p_rel_error_all,
-  filename = "fig_output/rel_error_all.pdf",
-  base_height = 5,
-  base_width = 5
-)
+# 
+# cowplot::save_plot(
+#   plot = p_rel_error_all,
+#   filename = "fig_output/rel_error_all.pdf",
+#   base_height = 5,
+#   base_width = 5
+# )
 ```
 
 
