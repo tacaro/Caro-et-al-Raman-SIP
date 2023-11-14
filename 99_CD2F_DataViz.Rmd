@@ -54,10 +54,6 @@ fit_data <- read_rds("cache/fit_data.RDS")
 # Fitting parameter data
 fitted_xy_data <- read_rds("cache/peak_data_xy.RDS")
 
-# LOD and LOQ data
-#LOD_LOQ <- readxl::read_excel("data_output/LOD_LOQ_data.xlsx")
-
-
 ```
 
 ## Colors
@@ -160,28 +156,10 @@ cowplot::save_plot(
 
 ### Fig. 1B: Example nanoSIMS
 
-```{python}
-print("Hello World!")
-import matplotlib.pyplot as plt
-import sims
-
-s = sims.SIMS('data/nanoSIMS/example_im/Thy_50_12_r4_r.im')
-
-# Align the image stack
-aligned_data, shifts = sims.utils.align(s)
-
-# Display total counts of aligned mass 1H as an image
-plt.imshow(aligned_data.loc['2H'].sum(dim='frame'))
-cbar = plt.colorbar()
-# The unit of the data is stored in the attributed dictionary
-cbar.set_label(s.data.attrs['unit'])
-plt.xlabel('X (pixels)')
-plt.ylabel('Y (pixels)')
-plt.show()
-```
+See python script
 
 
-### Fig. 1D Summarized data
+### Fig. 2 Summarized data
 ```{r}
 
 # Summarized data:
@@ -231,7 +209,7 @@ coreg_model_data_plot <- co_registered_fit |>
   
 ```
 
-### Fig. 1D Output
+### Fig. 2 Output
 ```{r}
 p_fig1 <- co_registered_summarized_plot |> 
   filter(f_l <= 40) |> 
@@ -242,7 +220,7 @@ p_fig1 <- co_registered_summarized_plot |>
     )
   ) +
   # 1:1 line
-  geom_abline(slope = 1, color = "black", alpha = 0.5) +
+  geom_abline(slope = 1, color = "black", linetype = "dotted") +
   # plot the lm from ALL the data, not the summarized points
   ggpmisc::stat_poly_line(
     data = coreg_model_data_plot |> filter(f_l != 50),
@@ -250,7 +228,7 @@ p_fig1 <- co_registered_summarized_plot |>
           y = value),
       fullrange = TRUE,
       se = FALSE,
-      size = 0.3,
+      size = 1,
       color = "#080099"
     ) +
   stat_poly_eq(
@@ -294,6 +272,7 @@ p_fig1 <- co_registered_summarized_plot |>
     strip.background.x = element_rect(fill = "black", size = 1),
     strip.background.y = element_rect(fill = "#363636", color = "#363636", size = 1),
     strip.text = element_text(color = "white", size = 12, face = "bold"),
+    strip.text.x = element_text(face = "italic"),
     aspect.ratio = 1,
     axis.text = element_text(face = "bold", color = "black"),
     axis.title = element_text(face = "bold", color = "black")
@@ -303,13 +282,10 @@ p_fig1
 
 cowplot::save_plot(
   plot = p_fig1, 
-  filename = "fig_output/Fig1D.pdf",                     
-  base_height = 8, base_width = 8
+  filename = "fig_output/Fig2.pdf",                     
+  base_height = 6, base_width = 6
   )
 ```
-
-
-
 
 
 
@@ -823,6 +799,9 @@ p_fit_mb <- fit_data %>%
     ) +
   facet_wrap(vars(fit_param,fit ), scales = "free") +
   theme_bw()
+
+
+p_fit_mb
 
 cowplot::plot_grid(p_fit_thy, p_fit_mb)
 ```
