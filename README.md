@@ -35,3 +35,4 @@ In publishing this repository, our hope is that this code is useful to other mem
 - `98_SIMS_viz.ipynb`: Jupyter notebook for visualizing SIMS data.
 - `99_CD2F_DataViz.Rmd`: Plots
 - `99_Modeling_Growth.Rmd`: Tests with modeling of growth
+- `nanosims_processor.py` : Script for extracting .im files and tabulating ROI information
